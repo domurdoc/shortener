@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/domurdoc/shortener/internal/config"
 	"github.com/domurdoc/shortener/internal/handler"
 	"github.com/domurdoc/shortener/internal/repository"
 	"github.com/domurdoc/shortener/internal/service"
@@ -17,10 +18,11 @@ func main() {
 }
 
 func run() error {
-	h := handler.New("http://localhost:8080", service.New(repository.NewMem(), nil))
+	options := config.ParseArgs()
+	h := handler.New(options.BaseURL.String(), service.New(repository.NewMem(), nil))
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Post("/", h.Shorten)
 	r.Get("/{shortCode}", h.Retrieve)
-	return http.ListenAndServe(":8080", r)
+	return http.ListenAndServe(options.Addr.String(), r)
 }
