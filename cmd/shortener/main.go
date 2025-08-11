@@ -6,6 +6,8 @@ import (
 	"github.com/domurdoc/shortener/internal/handler"
 	"github.com/domurdoc/shortener/internal/repository"
 	"github.com/domurdoc/shortener/internal/service"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 func main() {
@@ -15,9 +17,10 @@ func main() {
 }
 
 func run() error {
-	shortenerHandler := handler.New("http://localhost:8080", service.New(repository.NewMem(), nil))
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /", shortenerHandler.Shorten)
-	mux.HandleFunc("GET /{shortCode}", shortenerHandler.Retrieve)
-	return http.ListenAndServe(":8080", mux)
+	h := handler.New("http://localhost:8080", service.New(repository.NewMem(), nil))
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Post("/", h.Shorten)
+	r.Get("/{shortCode}", h.Retrieve)
+	return http.ListenAndServe(":8080", r)
 }
