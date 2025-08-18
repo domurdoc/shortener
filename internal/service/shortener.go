@@ -1,45 +1,42 @@
 package service
 
 import (
-	"fmt"
-	"math/rand"
+	"crypto/rand"
+	"net/url"
 
 	"github.com/domurdoc/shortener/internal/repository"
 )
 
 type Shortener struct {
-	repo    repository.Shortener
-	genCode func() string
+	repo repository.Shortener
 }
 
-const defaultCharset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const defaultLength = 6
+const (
+	charSet         = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	shortCodeLength = 6
+	charSetLength   = len(charSet)
+)
 
-func New(repo repository.Shortener, genCode func() string) *Shortener {
-	if genCode == nil {
-		genCode = NewGenFunc(defaultCharset, defaultLength)
+func New(repo repository.Shortener) *Shortener {
+	return &Shortener{repo: repo}
+}
+
+func (s *Shortener) Shorten(longURL string) (string, error) {
+	parsedLongURL, err := url.Parse(longURL)
+	if err != nil {
+		return "", &URLError{msg: err.Error(), url: longURL}
 	}
-	return &Shortener{
-		repo:    repo,
-		genCode: genCode,
+	if parsedLongURL.Host == "" {
+		return "", &URLError{msg: "must be absolute", url: longURL}
 	}
+	if parsedLongURL.String() != longURL {
+		return "", &URLError{msg: "must be url-encoded", url: longURL}
+	}
+	shortCode := generateShortCode()
+	return shortCode, s.repo.Store(repository.Key(shortCode), repository.Value(longURL))
 }
 
-type NotFoundError struct {
-	shortCode string
-}
-
-func (e *NotFoundError) Error() string {
-	return fmt.Sprintf("URL for code %q not found", e.shortCode)
-}
-
-func (s *Shortener) Shorten(URL string) (string, error) {
-	// URL expected to be valid absolute url-encoded
-	code := s.genCode()
-	return code, s.repo.Store(repository.Key(code), repository.Value(URL))
-}
-
-func (s *Shortener) Get(shortCode string) (string, error) {
+func (s *Shortener) GetByShortCode(shortCode string) (string, error) {
 	url, err := s.repo.Fetch(repository.Key(shortCode))
 	if err != nil {
 		return "", &NotFoundError{shortCode: shortCode}
@@ -47,12 +44,12 @@ func (s *Shortener) Get(shortCode string) (string, error) {
 	return string(url), nil
 }
 
-func NewGenFunc(charset string, length int) func() string {
-	return func() string {
-		chars := make([]byte, length)
-		for i := range length {
-			chars[i] = charset[rand.Intn(len(charset))]
-		}
-		return string(chars)
+func generateShortCode() string {
+	// https://stackoverflow.com/a/67035900
+	buf := make([]byte, shortCodeLength)
+	rand.Read(buf)
+	for i := range shortCodeLength {
+		buf[i] = charSet[int(buf[i])%charSetLength]
 	}
+	return string(buf)
 }
