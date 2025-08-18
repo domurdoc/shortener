@@ -29,11 +29,11 @@ func (s *MemShortener) Store(key Key, value Value) error {
 	if !exists {
 		s.storage[key] = value
 		return nil
-	} else if value0 == value {
-		return nil
-	} else {
-		return fmt.Errorf("key %q already exists", key)
 	}
+	if value0 == value {
+		return nil
+	}
+	return fmt.Errorf("key %q already exists", key)
 }
 
 func (s *MemShortener) Fetch(key Key) (Value, error) {
