@@ -3,15 +3,18 @@ package config
 import "os"
 
 func parseEnv(options *Options) {
-	serverAddress, ok := os.LookupEnv("SERVER_ADDRESS")
-	if ok {
-		if err := options.Addr.Set(serverAddress); err != nil {
+	if value, ok := os.LookupEnv("SERVER_ADDRESS"); ok {
+		if err := options.Addr.Set(value); err != nil {
 			panic(err)
 		}
 	}
-	baseURL, ok := os.LookupEnv("BASE_URL")
-	if ok {
-		if err := options.BaseURL.Set(baseURL); err != nil {
+	if value, ok := os.LookupEnv("BASE_URL"); ok {
+		if err := options.BaseURL.Set(value); err != nil {
+			panic(err)
+		}
+	}
+	if value, ok := os.LookupEnv("LOG_LEVEL"); ok {
+		if err := options.LogLevel.Set(value); err != nil {
 			panic(err)
 		}
 	}
