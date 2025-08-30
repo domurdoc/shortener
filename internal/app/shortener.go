@@ -11,7 +11,7 @@ import (
 )
 
 func Run() error {
-	options := config.ParseArgs()
+	options := config.LoadOptions()
 	repo := repository.NewMem()
 	service := service.New(repo)
 	handler := handler.New(options.BaseURL.String(), service)
