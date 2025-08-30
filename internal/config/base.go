@@ -3,9 +3,28 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 )
+
+type LogLevel struct {
+	text string
+}
+
+func (l LogLevel) String() string {
+	return l.text
+}
+
+func (l *LogLevel) Set(value string) error {
+	levels := []string{"debug", "info", "warn", "error", "fatal"}
+	value = strings.ToLower(value)
+	if slices.Contains(levels, value) {
+		l.text = value
+		return nil
+	}
+	return fmt.Errorf("must be one of (case-insensitive): %v", levels)
+}
 
 type NetAddress struct {
 	Host string
@@ -16,8 +35,8 @@ func (n NetAddress) String() string {
 	return fmt.Sprintf("%s:%d", n.Host, n.Port)
 }
 
-func (n *NetAddress) Set(FlagValue string) error {
-	parts := strings.Split(FlagValue, ":")
+func (n *NetAddress) Set(value string) error {
+	parts := strings.Split(value, ":")
 	if len(parts) != 2 {
 		return fmt.Errorf("need address in a form ip:port")
 	}
@@ -42,8 +61,8 @@ func (u URL) String() string {
 	return u.parsedURL.String()
 }
 
-func (u *URL) Set(FlagValue string) error {
-	parsedURL, err := url.Parse(FlagValue)
+func (u *URL) Set(value string) error {
+	parsedURL, err := url.Parse(value)
 	if err != nil {
 		return err
 	}
@@ -55,15 +74,21 @@ func (u *URL) Set(FlagValue string) error {
 }
 
 type Options struct {
-	Addr    NetAddress
-	BaseURL URL
+	Addr     NetAddress
+	BaseURL  URL
+	LogLevel LogLevel
 }
 
 func (o Options) String() string {
-	return fmt.Sprintf("addr = %q; baseURL = %q", o.Addr, o.BaseURL)
+	return fmt.Sprintf(
+		"addr = %q; baseURL = %q; logLevel = %q",
+		o.Addr,
+		o.BaseURL,
+		o.LogLevel,
+	)
 }
 
-func NewOptions(defaultAddr, defaultBaseURL string) *Options {
+func NewOptions(defaultAddr, defaultBaseURL, defaultLogLevel string) *Options {
 	baseURL := URL{}
 	if err := baseURL.Set(defaultBaseURL); err != nil {
 		panic(err)
@@ -72,5 +97,9 @@ func NewOptions(defaultAddr, defaultBaseURL string) *Options {
 	if err := addr.Set(defaultAddr); err != nil {
 		panic(err)
 	}
-	return &Options{Addr: addr, BaseURL: baseURL}
+	logLevel := LogLevel{}
+	if err := logLevel.Set(defaultLogLevel); err != nil {
+		panic(err)
+	}
+	return &Options{Addr: addr, BaseURL: baseURL, LogLevel: logLevel}
 }

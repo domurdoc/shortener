@@ -4,13 +4,13 @@ import (
 	"net/http"
 
 	"github.com/domurdoc/shortener/internal/handler"
+	"github.com/domurdoc/shortener/internal/logger"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 func NewChi(handler *handler.Shortener) chi.Router {
 	router := chi.NewRouter()
-	router.Use(middleware.Logger)
+	router.Use(logger.RequestLogger)
 	router.Post("/", handler.Shorten)
 	router.Get("/{shortCode}", handler.GetByShortCode)
 	return router
