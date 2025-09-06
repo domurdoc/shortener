@@ -1,21 +1,30 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
-	"net/url"
+	"strings"
 
 	"github.com/domurdoc/shortener/internal/service"
 )
 
+const (
+	ContentTypeJSON      = "application/json"
+	ContentTypeTextPlain = "text/plain; charset=utf-8"
+)
+const (
+	HeaderContentType = "Content-Type"
+)
+
 type Shortener struct {
-	baseURL string
 	service *service.Shortener
 }
 
-func New(baseURL string, shortenerService *service.Shortener) *Shortener {
-	return &Shortener{baseURL: baseURL, service: shortenerService}
+func New(shortenerService *service.Shortener) *Shortener {
+	return &Shortener{service: shortenerService}
 }
 
 func (h *Shortener) Shorten(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +35,7 @@ func (h *Shortener) Shorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	longURL := string(buf[:n])
-	shortCode, err := h.service.Shorten(longURL)
+	shortURL, err := h.service.Shorten(longURL)
 	var urlError *service.URLError
 	if errors.As(err, &urlError) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -36,12 +45,7 @@ func (h *Shortener) Shorten(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	shortURL, err := url.JoinPath(h.baseURL, shortCode)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set(HeaderContentType, ContentTypeTextPlain)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(shortURL))
 }
@@ -60,4 +64,44 @@ func (h *Shortener) GetByShortCode(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Location", longURL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+type Request struct {
+	URL string `json:"url"`
+}
+
+type Response struct {
+	Result string `json:"result"`
+}
+
+func (h *Shortener) ShortenJSON(w http.ResponseWriter, r *http.Request) {
+	var req Request
+
+	contentType := r.Header.Get(HeaderContentType)
+	if strings.ToLower(contentType) != ContentTypeJSON {
+		http.Error(w, fmt.Sprintf("wanted Content-Type: %s", ContentTypeJSON), http.StatusBadRequest)
+		return
+	}
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	shortURL, err := h.service.Shorten(req.URL)
+	var urlError *service.URLError
+	if errors.As(err, &urlError) {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set(HeaderContentType, ContentTypeJSON)
+	w.WriteHeader(http.StatusCreated)
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(Response{Result: shortURL}); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

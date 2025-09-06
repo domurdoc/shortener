@@ -8,7 +8,8 @@ import (
 )
 
 type Shortener struct {
-	repo repository.Shortener
+	repo    repository.Shortener
+	baseURL string
 }
 
 const (
@@ -17,8 +18,8 @@ const (
 	charSetLength   = len(charSet)
 )
 
-func New(repo repository.Shortener) *Shortener {
-	return &Shortener{repo: repo}
+func New(repo repository.Shortener, baseURL string) *Shortener {
+	return &Shortener{repo: repo, baseURL: baseURL}
 }
 
 func (s *Shortener) Shorten(longURL string) (string, error) {
@@ -33,7 +34,11 @@ func (s *Shortener) Shorten(longURL string) (string, error) {
 		return "", &URLError{msg: "must be url-encoded", url: longURL}
 	}
 	shortCode := generateShortCode()
-	return shortCode, s.repo.Store(repository.Key(shortCode), repository.Value(longURL))
+	shortURL, err := url.JoinPath(s.baseURL, shortCode)
+	if err != nil {
+		return "", err
+	}
+	return shortURL, s.repo.Store(repository.Key(shortCode), repository.Value(longURL))
 }
 
 func (s *Shortener) GetByShortCode(shortCode string) (string, error) {

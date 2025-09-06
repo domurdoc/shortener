@@ -18,8 +18,8 @@ func Run() error {
 	}
 	defer logger.Log.Sync()
 	repo := repository.NewMem()
-	service := service.New(repo)
-	handler := handler.New(options.BaseURL.String(), service)
+	service := service.New(repo, options.BaseURL.String())
+	handler := handler.New(service)
 	router := router.NewChi(handler)
 	logger.Sugar.Infow(
 		"Starting server",
