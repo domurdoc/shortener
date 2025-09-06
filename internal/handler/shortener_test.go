@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -31,7 +32,7 @@ func TestShortener_Shorten(t *testing.T) {
 			baseURL: "http://localhost:8080",
 			want: want{
 				statusCode:  http.StatusCreated,
-				contentType: "text/plain; charset=utf-8",
+				contentType: ContentTypeTextPlain,
 			},
 		},
 		{
@@ -39,7 +40,7 @@ func TestShortener_Shorten(t *testing.T) {
 			longURL: "/abcdef/",
 			want: want{
 				statusCode:  http.StatusBadRequest,
-				contentType: "text/plain; charset=utf-8",
+				contentType: ContentTypeTextPlain,
 			},
 		},
 		{
@@ -47,7 +48,7 @@ func TestShortener_Shorten(t *testing.T) {
 			longURL: "/привет как дела?",
 			want: want{
 				statusCode:  http.StatusBadRequest,
-				contentType: "text/plain; charset=utf-8",
+				contentType: ContentTypeTextPlain,
 			},
 		},
 		{
@@ -55,13 +56,13 @@ func TestShortener_Shorten(t *testing.T) {
 			longURL: "yandex.com",
 			want: want{
 				statusCode:  http.StatusBadRequest,
-				contentType: "text/plain; charset=utf-8",
+				contentType: ContentTypeTextPlain,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(tt.baseURL, service.New(repository.NewMem()))
+			handler := New(service.New(repository.NewMem(), tt.baseURL))
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			w := httptest.NewRecorder()
@@ -69,7 +70,7 @@ func TestShortener_Shorten(t *testing.T) {
 
 			resp := w.Result()
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
-			assert.Equal(t, tt.want.contentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.want.contentType, resp.Header.Get(HeaderContentType))
 
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
@@ -115,7 +116,7 @@ func TestShortener_Retrieve(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := repository.NewMem()
-			handler := New("", service.New(repo))
+			handler := New(service.New(repo, ""))
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
 				err := repo.Store(repository.Key(tt.shortCode), repository.Value(tt.want.location))
@@ -136,6 +137,106 @@ func TestShortener_Retrieve(t *testing.T) {
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
 				assert.Equal(t, tt.want.location, resp.Header.Get("Location"))
 			}
+		})
+	}
+}
+
+func TestShortener_ShortenJSON(t *testing.T) {
+	type want struct {
+		statusCode int
+	}
+	tests := []struct {
+		name        string
+		body        string
+		contentType string
+		want        want
+	}{
+		{
+			name:        "Invalid Content-Type: plain/text",
+			contentType: ContentTypeTextPlain,
+			want:        want{statusCode: http.StatusBadRequest},
+		},
+		{
+			name:        "Invalid Content-Type: empty",
+			contentType: "",
+			want:        want{statusCode: http.StatusBadRequest},
+		},
+		{
+			name:        "Invalid JSON: empty",
+			body:        "",
+			contentType: ContentTypeJSON,
+			want:        want{statusCode: http.StatusBadRequest},
+		},
+		{
+			name:        "Invalid JSON: broken",
+			body:        `{"`,
+			contentType: ContentTypeJSON,
+			want:        want{statusCode: http.StatusBadRequest},
+		},
+		{
+			name:        "Invalid JSON: null",
+			body:        `null`,
+			contentType: ContentTypeJSON,
+			want:        want{statusCode: http.StatusBadRequest},
+		},
+		{
+			name:        "Invalid JSON: no 'url' key",
+			body:        `{"notaurl": "hello"}`,
+			contentType: ContentTypeJSON,
+			want:        want{statusCode: http.StatusBadRequest},
+		},
+		{
+			name:        "Common request",
+			body:        `{"url": "http://yandex.com"}`,
+			contentType: ContentTypeJSON,
+			want:        want{statusCode: http.StatusCreated},
+		},
+		{
+			name:        "Extra JSON keys",
+			body:        `{"url": "http://yandex.com", "extrakey": 123, "xxx": "18"}`,
+			contentType: ContentTypeJSON,
+			want:        want{statusCode: http.StatusCreated},
+		},
+		{
+			name:        "'URL' key (uppercase)",
+			body:        `{"url": "http://yandex.com"}`,
+			contentType: ContentTypeJSON,
+			want:        want{statusCode: http.StatusCreated},
+		},
+		{
+			name:        "Ivalid url",
+			body:        `{"url": "hello"}`,
+			contentType: ContentTypeJSON,
+			want:        want{statusCode: http.StatusBadRequest},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := New(service.New(repository.NewMem(), "http://localhost:8081"))
+
+			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
+			r.Header.Set(HeaderContentType, tt.contentType)
+			w := httptest.NewRecorder()
+			handler.ShortenJSON(w, r)
+
+			resp := w.Result()
+			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
+
+			if resp.StatusCode == http.StatusBadRequest {
+				return
+			}
+			assert.Equal(t, ContentTypeJSON, resp.Header.Get(HeaderContentType))
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			err = resp.Body.Close()
+			require.NoError(t, err)
+
+			var respJSON Response
+			err = json.Unmarshal(body, &respJSON)
+			require.NoError(t, err)
+
+			assert.NotEmpty(t, respJSON.Result)
 		})
 	}
 }
