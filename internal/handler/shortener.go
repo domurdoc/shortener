@@ -55,6 +55,7 @@ func (h *Shortener) GetByShortCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Location", longURL)
+	httputils.SetContentType(w.Header(), httputils.ContentTypeTextPlain)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 

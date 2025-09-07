@@ -63,7 +63,7 @@ func TestShortener_Shorten(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(service.New(repository.NewMem(), tt.baseURL))
+			handler := New(service.New(repository.NewMemRepo(), tt.baseURL))
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			w := httptest.NewRecorder()
@@ -116,7 +116,7 @@ func TestShortener_Retrieve(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := repository.NewMem()
+			repo := repository.NewMemRepo()
 			handler := New(service.New(repo, ""))
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
@@ -213,7 +213,7 @@ func TestShortener_ShortenJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(service.New(repository.NewMem(), "http://localhost:8081"))
+			handler := New(service.New(repository.NewMemRepo(), "http://localhost:8081"))
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
 			r.Header.Set(httputils.HeaderContentType, tt.contentType)

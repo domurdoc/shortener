@@ -15,7 +15,7 @@ type compressWriter struct {
 }
 
 func newCompressWriter(w http.ResponseWriter) *compressWriter {
-	return &compressWriter{w: w, zw: gzip.NewWriter(w)}
+	return &compressWriter{w: w, zw: gzip.NewWriter(w), ok: false}
 }
 
 func (c *compressWriter) Write(p []byte) (int, error) {

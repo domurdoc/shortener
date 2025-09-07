@@ -73,10 +73,25 @@ func (u *URL) Set(value string) error {
 	return nil
 }
 
+type FilePath struct {
+	path string
+}
+
+func (f FilePath) String() string {
+	return f.path
+}
+
+func (f *FilePath) Set(value string) error {
+	// TODO: add validation
+	f.path = strings.TrimSpace(value)
+	return nil
+}
+
 type Options struct {
-	Addr     NetAddress
-	BaseURL  URL
-	LogLevel LogLevel
+	Addr            NetAddress
+	BaseURL         URL
+	LogLevel        LogLevel
+	FileStoragePath FilePath
 }
 
 func (o Options) String() string {
@@ -88,18 +103,21 @@ func (o Options) String() string {
 	)
 }
 
-func NewOptions(defaultAddr, defaultBaseURL, defaultLogLevel string) *Options {
-	baseURL := URL{}
-	if err := baseURL.Set(defaultBaseURL); err != nil {
+func NewOptions(defaultAddr, defaultBaseURL, defaultLogLevel, defaultStoragePath string) *Options {
+	options := Options{}
+	setOptionFromString(&options.BaseURL, defaultBaseURL)
+	setOptionFromString(&options.Addr, defaultAddr)
+	setOptionFromString(&options.LogLevel, defaultLogLevel)
+	setOptionFromString(&options.FileStoragePath, defaultStoragePath)
+	return &options
+}
+
+type option interface {
+	Set(string) error
+}
+
+func setOptionFromString(o option, value string) {
+	if err := o.Set(value); err != nil {
 		panic(err)
 	}
-	addr := NetAddress{}
-	if err := addr.Set(defaultAddr); err != nil {
-		panic(err)
-	}
-	logLevel := LogLevel{}
-	if err := logLevel.Set(defaultLogLevel); err != nil {
-		panic(err)
-	}
-	return &Options{Addr: addr, BaseURL: baseURL, LogLevel: logLevel}
 }
