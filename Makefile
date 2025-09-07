@@ -9,7 +9,7 @@ re:
 	rm -f cmd/shortener/shortener
 	go build -o cmd/shortener/shortener cmd/shortener/main.go
 
-test: test1 test2 test3 test4 test5 test6 test7
+test: test1 test2 test3 test4 test5 test6 test7 test8
 
 test1:
 	./shortenertestbeta -test.v -test.run=^TestIteration1$$ -binary-path=cmd/shortener/shortener
@@ -32,4 +32,7 @@ test6:
 test7:
 	./shortenertestbeta -test.v -test.run=^TestIteration7$$ -binary-path=cmd/shortener/shortener -source-path=.
 
-PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7
+test8:
+	./shortenertestbeta -test.v -test.run=^TestIteration8$$ -binary-path=cmd/shortener/shortener
+
+PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8
