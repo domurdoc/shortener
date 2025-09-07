@@ -19,7 +19,7 @@ func Run() error {
 		return err
 	}
 	defer logger.Log.Sync()
-	repo := repository.NewMem()
+	repo := repository.NewFileRepo(options.FileStoragePath.String())
 	service := service.New(repo, options.BaseURL.String())
 	handler := handler.New(service)
 	router := router.NewChi(handler)

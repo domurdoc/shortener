@@ -8,7 +8,7 @@ import (
 )
 
 type Shortener struct {
-	repo    repository.Shortener
+	repo    repository.Repo
 	baseURL string
 }
 
@@ -18,7 +18,7 @@ const (
 	charSetLength   = len(charSet)
 )
 
-func New(repo repository.Shortener, baseURL string) *Shortener {
+func New(repo repository.Repo, baseURL string) *Shortener {
 	return &Shortener{repo: repo, baseURL: baseURL}
 }
 

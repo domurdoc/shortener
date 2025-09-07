@@ -23,5 +23,6 @@ vendor/
 .idea
 .vscode
 
+db.json
 
 shortenertest*

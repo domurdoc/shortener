@@ -9,7 +9,10 @@ re:
 	rm -f cmd/shortener/shortener
 	go build -o cmd/shortener/shortener cmd/shortener/main.go
 
-test: test1 test2 test3 test4 test5 test6 test7 test8
+kill:
+	killall -9 shortener
+
+test: test1 test2 test3 test4 test5 test6 test7 test8 test9
 
 test1:
 	./shortenertestbeta -test.v -test.run=^TestIteration1$$ -binary-path=cmd/shortener/shortener
@@ -35,4 +38,7 @@ test7:
 test8:
 	./shortenertestbeta -test.v -test.run=^TestIteration8$$ -binary-path=cmd/shortener/shortener
 
-PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8
+test9:
+	./shortenertestbeta -test.v -test.run=^TestIteration9$$ -binary-path=cmd/shortener/shortener -source-path=. -file-storage-path=db.json
+
+PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8 test9

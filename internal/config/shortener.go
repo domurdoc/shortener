@@ -5,6 +5,7 @@ func LoadOptions() *Options {
 		":8080",
 		"http://localhost:8080",
 		"info",
+		"db.json",
 	)
 	parseArgs(options)
 	parseEnv(options)
