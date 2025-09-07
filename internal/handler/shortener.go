@@ -6,17 +6,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
+	"github.com/domurdoc/shortener/internal/httputils"
 	"github.com/domurdoc/shortener/internal/service"
-)
-
-const (
-	ContentTypeJSON      = "application/json"
-	ContentTypeTextPlain = "text/plain; charset=utf-8"
-)
-const (
-	HeaderContentType = "Content-Type"
 )
 
 type Shortener struct {
@@ -45,7 +37,7 @@ func (h *Shortener) Shorten(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set(HeaderContentType, ContentTypeTextPlain)
+	httputils.SetContentType(w.Header(), httputils.ContentTypeTextPlain)
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(shortURL))
 }
@@ -77,9 +69,8 @@ type Response struct {
 func (h *Shortener) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	var req Request
 
-	contentType := r.Header.Get(HeaderContentType)
-	if strings.ToLower(contentType) != ContentTypeJSON {
-		http.Error(w, fmt.Sprintf("wanted Content-Type: %s", ContentTypeJSON), http.StatusBadRequest)
+	if !httputils.HasContentType(r.Header, httputils.ContentTypeJSON) {
+		http.Error(w, fmt.Sprintf("wanted Content-Type: %s", httputils.ContentTypeJSON), http.StatusBadRequest)
 		return
 	}
 	dec := json.NewDecoder(r.Body)
@@ -97,7 +88,7 @@ func (h *Shortener) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set(HeaderContentType, ContentTypeJSON)
+	httputils.SetContentType(w.Header(), httputils.ContentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(Response{Result: shortURL}); err != nil {
