@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/domurdoc/shortener/internal/httputils"
 	"github.com/domurdoc/shortener/internal/repository"
 	"github.com/domurdoc/shortener/internal/service"
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func TestShortener_Shorten(t *testing.T) {
 			baseURL: "http://localhost:8080",
 			want: want{
 				statusCode:  http.StatusCreated,
-				contentType: ContentTypeTextPlain,
+				contentType: httputils.ContentTypeTextPlain,
 			},
 		},
 		{
@@ -40,7 +41,7 @@ func TestShortener_Shorten(t *testing.T) {
 			longURL: "/abcdef/",
 			want: want{
 				statusCode:  http.StatusBadRequest,
-				contentType: ContentTypeTextPlain,
+				contentType: httputils.ContentTypeTextPlain,
 			},
 		},
 		{
@@ -48,7 +49,7 @@ func TestShortener_Shorten(t *testing.T) {
 			longURL: "/привет как дела?",
 			want: want{
 				statusCode:  http.StatusBadRequest,
-				contentType: ContentTypeTextPlain,
+				contentType: httputils.ContentTypeTextPlain,
 			},
 		},
 		{
@@ -56,7 +57,7 @@ func TestShortener_Shorten(t *testing.T) {
 			longURL: "yandex.com",
 			want: want{
 				statusCode:  http.StatusBadRequest,
-				contentType: ContentTypeTextPlain,
+				contentType: httputils.ContentTypeTextPlain,
 			},
 		},
 	}
@@ -70,7 +71,7 @@ func TestShortener_Shorten(t *testing.T) {
 
 			resp := w.Result()
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)
-			assert.Equal(t, tt.want.contentType, resp.Header.Get(HeaderContentType))
+			assert.Equal(t, tt.want.contentType, resp.Header.Get(httputils.HeaderContentType))
 
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
@@ -153,7 +154,7 @@ func TestShortener_ShortenJSON(t *testing.T) {
 	}{
 		{
 			name:        "Invalid Content-Type: plain/text",
-			contentType: ContentTypeTextPlain,
+			contentType: httputils.ContentTypeTextPlain,
 			want:        want{statusCode: http.StatusBadRequest},
 		},
 		{
@@ -164,49 +165,49 @@ func TestShortener_ShortenJSON(t *testing.T) {
 		{
 			name:        "Invalid JSON: empty",
 			body:        "",
-			contentType: ContentTypeJSON,
+			contentType: httputils.ContentTypeJSON,
 			want:        want{statusCode: http.StatusBadRequest},
 		},
 		{
 			name:        "Invalid JSON: broken",
 			body:        `{"`,
-			contentType: ContentTypeJSON,
+			contentType: httputils.ContentTypeJSON,
 			want:        want{statusCode: http.StatusBadRequest},
 		},
 		{
 			name:        "Invalid JSON: null",
 			body:        `null`,
-			contentType: ContentTypeJSON,
+			contentType: httputils.ContentTypeJSON,
 			want:        want{statusCode: http.StatusBadRequest},
 		},
 		{
 			name:        "Invalid JSON: no 'url' key",
 			body:        `{"notaurl": "hello"}`,
-			contentType: ContentTypeJSON,
+			contentType: httputils.ContentTypeJSON,
 			want:        want{statusCode: http.StatusBadRequest},
 		},
 		{
 			name:        "Common request",
 			body:        `{"url": "http://yandex.com"}`,
-			contentType: ContentTypeJSON,
+			contentType: httputils.ContentTypeJSON,
 			want:        want{statusCode: http.StatusCreated},
 		},
 		{
 			name:        "Extra JSON keys",
 			body:        `{"url": "http://yandex.com", "extrakey": 123, "xxx": "18"}`,
-			contentType: ContentTypeJSON,
+			contentType: httputils.ContentTypeJSON,
 			want:        want{statusCode: http.StatusCreated},
 		},
 		{
 			name:        "'URL' key (uppercase)",
 			body:        `{"url": "http://yandex.com"}`,
-			contentType: ContentTypeJSON,
+			contentType: httputils.ContentTypeJSON,
 			want:        want{statusCode: http.StatusCreated},
 		},
 		{
 			name:        "Ivalid url",
 			body:        `{"url": "hello"}`,
-			contentType: ContentTypeJSON,
+			contentType: httputils.ContentTypeJSON,
 			want:        want{statusCode: http.StatusBadRequest},
 		},
 	}
@@ -215,7 +216,7 @@ func TestShortener_ShortenJSON(t *testing.T) {
 			handler := New(service.New(repository.NewMem(), "http://localhost:8081"))
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
-			r.Header.Set(HeaderContentType, tt.contentType)
+			r.Header.Set(httputils.HeaderContentType, tt.contentType)
 			w := httptest.NewRecorder()
 			handler.ShortenJSON(w, r)
 
@@ -225,7 +226,7 @@ func TestShortener_ShortenJSON(t *testing.T) {
 			if resp.StatusCode == http.StatusBadRequest {
 				return
 			}
-			assert.Equal(t, ContentTypeJSON, resp.Header.Get(HeaderContentType))
+			assert.Equal(t, httputils.ContentTypeJSON, resp.Header.Get(httputils.HeaderContentType))
 
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
