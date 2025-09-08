@@ -2,6 +2,7 @@ package service
 
 import (
 	"crypto/rand"
+	"errors"
 	"net/url"
 
 	"github.com/domurdoc/shortener/internal/repository"
@@ -43,8 +44,12 @@ func (s *Shortener) Shorten(longURL string) (string, error) {
 
 func (s *Shortener) GetByShortCode(shortCode string) (string, error) {
 	url, err := s.repo.Fetch(repository.Key(shortCode))
-	if err != nil {
+	var keyNotFoundError *repository.KeyNotFoundError
+	if errors.As(err, &keyNotFoundError) {
 		return "", &NotFoundError{shortCode: shortCode}
+	}
+	if err != nil {
+		return "", err
 	}
 	return string(url), nil
 }

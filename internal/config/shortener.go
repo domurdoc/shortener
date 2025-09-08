@@ -1,7 +1,7 @@
 package config
 
 func LoadOptions() *Options {
-	options := NewOptions(
+	options := New(
 		":8080",
 		"http://localhost:8080",
 		"info",
