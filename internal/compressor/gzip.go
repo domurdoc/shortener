@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/domurdoc/shortener/internal/httputils"
+	"github.com/domurdoc/shortener/internal/httputil"
 )
 
 type compressWriter struct {
@@ -26,13 +26,13 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 }
 
 func (c *compressWriter) WriteHeader(statusCode int) {
-	if httputils.HasContentType(
+	if httputil.HasContentType(
 		c.w.Header(),
-		httputils.ContentTypeJSON,
-		httputils.ContentTypeTextPlain,
+		httputil.ContentTypeJSON,
+		httputil.ContentTypeTextPlain,
 	) {
 		c.ok = true
-		httputils.SetContentEncoding(c.w.Header(), httputils.EncodingGZIP)
+		httputil.SetContentEncoding(c.w.Header(), httputil.EncodingGZIP)
 	}
 	c.w.WriteHeader(statusCode)
 }
@@ -47,37 +47,37 @@ func (c *compressWriter) Close() error {
 
 type compressReader struct {
 	r  io.ReadCloser
-	gr *gzip.Reader
+	zr *gzip.Reader
 }
 
 func newCompressReader(r io.ReadCloser) (*compressReader, error) {
-	gr, err := gzip.NewReader(r)
+	zr, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, err
 	}
-	return &compressReader{r: r, gr: gr}, nil
+	return &compressReader{r: r, zr: zr}, nil
 }
 
 func (c *compressReader) Read(p []byte) (int, error) {
-	return c.gr.Read(p)
+	return c.zr.Read(p)
 }
 
 func (c *compressReader) Close() error {
 	if err := c.r.Close(); err != nil {
 		return err
 	}
-	return c.gr.Close()
+	return c.zr.Close()
 }
 
 func GZIPMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ow := w
-		if httputils.HasAcceptsEncoding(r.Header, httputils.EncodingGZIP) {
+		if httputil.HasAcceptsEncoding(r.Header, httputil.EncodingGZIP) {
 			cw := newCompressWriter(w)
 			ow = cw
 			defer cw.Close()
 		}
-		if httputils.HasContentEncoding(r.Header, httputils.EncodingGZIP) {
+		if httputil.HasContentEncoding(r.Header, httputil.EncodingGZIP) {
 			body, err := newCompressReader(r.Body)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)

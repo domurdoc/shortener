@@ -3,22 +3,30 @@ package router
 import (
 	"net/http"
 
+	"github.com/domurdoc/shortener/internal/compressor"
 	"github.com/domurdoc/shortener/internal/handler"
+	"github.com/domurdoc/shortener/internal/httputil"
+	"github.com/domurdoc/shortener/internal/logger"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 )
 
-func NewChi(handler *handler.Shortener) chi.Router {
+func New(handler *handler.Shortener, log *zap.SugaredLogger) http.Handler {
 	router := chi.NewRouter()
+	setupRoutes(router, handler)
+	return setupMiddleware(router, log)
+}
+
+func setupRoutes(router *chi.Mux, handler *handler.Shortener) {
 	router.Post("/", handler.Shorten)
 	router.Get("/{shortCode}", handler.GetByShortCode)
 	router.Post("/api/shorten", handler.ShortenJSON)
-	return router
 }
 
-func NewBase(handler *handler.Shortener) http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /", handler.Shorten)
-	mux.HandleFunc("GET /{shortCode}", handler.GetByShortCode)
-	mux.HandleFunc("POST /api/shorten", handler.ShortenJSON)
-	return mux
+func setupMiddleware(router *chi.Mux, log *zap.SugaredLogger) http.Handler {
+	return httputil.AddMiddlewares(
+		router,
+		logger.NewRequestLogger(log),
+		compressor.GZIPMiddleware,
+	)
 }
