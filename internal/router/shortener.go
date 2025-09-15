@@ -19,6 +19,7 @@ func New(handler *handler.Shortener, log *zap.SugaredLogger) http.Handler {
 
 func setupRoutes(router *chi.Mux, handler *handler.Shortener) {
 	router.Post("/", handler.Shorten)
+	router.Get("/ping", handler.Ping)
 	router.Get("/{shortCode}", handler.GetByShortCode)
 	router.Post("/api/shorten", handler.ShortenJSON)
 }

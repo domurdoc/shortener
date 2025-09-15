@@ -6,6 +6,7 @@ func LoadOptions() *Options {
 		"http://localhost:8080",
 		"info",
 		"db.json",
+		"user=yandex host=localhost port=5432 database=yandex sslmode=disable",
 	)
 	parseArgs(options)
 	parseEnv(options)

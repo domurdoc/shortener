@@ -62,7 +62,7 @@ func TestShortener_Shorten(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(service.New(repository.NewMemRepo(), tt.baseURL))
+			handler := New(service.New(repository.NewMemRepo(), tt.baseURL), nil)
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			w := httptest.NewRecorder()
@@ -116,7 +116,7 @@ func TestShortener_Retrieve(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := repository.NewMemRepo()
-			handler := New(service.New(repo, ""))
+			handler := New(service.New(repo, ""), nil)
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
 				err := repo.Store(repository.Key(tt.shortCode), repository.Value(tt.want.location))
