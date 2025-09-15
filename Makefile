@@ -5,40 +5,42 @@ exe:
 	./cmd/shortener/shortener
 
 re:
-	killall -9 shortener || true
 	rm -f cmd/shortener/shortener
 	go build -o cmd/shortener/shortener cmd/shortener/main.go
 
 kill:
-	killall -9 shortener
+	killall -9 shortener || true
 
-test: test1 test2 test3 test4 test5 test6 test7 test8 test9
+test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10
 
-test1:
+test1: kill
 	./shortenertest -test.v -test.run=^TestIteration1$$ -binary-path=cmd/shortener/shortener
 
-test2:
+test2: kill
 	./shortenertest -test.v -test.run=^TestIteration2$$ -source-path=.
 
-test3:
+test3: kill
 	./shortenertest -test.v -test.run=^TestIteration3$$ -source-path=.
 
-test4:
+test4: kill
 	./shortenertest -test.v -test.run=^TestIteration4$$ -binary-path=cmd/shortener/shortener -server-port=8080
 
-test5:
+test5: kill
 	SERVER_PORT=8080 ./shortenertest -test.v -test.run=^TestIteration5$$ -binary-path=cmd/shortener/shortener -server-port=8080
 
-test6:
+test6: kill
 	./shortenertest -test.v -test.run=^TestIteration6$$ -source-path=.
 
-test7:
+test7: kill
 	./shortenertest -test.v -test.run=^TestIteration7$$ -binary-path=cmd/shortener/shortener -source-path=.
 
-test8:
+test8: kill
 	./shortenertest -test.v -test.run=^TestIteration8$$ -binary-path=cmd/shortener/shortener
 
-test9:
+test9: kill
 	./shortenertest -test.v -test.run=^TestIteration9$$ -binary-path=cmd/shortener/shortener -source-path=. -file-storage-path=db.json
 
-PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8 test9
+test10: kill
+	./shortenertest -test.v -test.run=^TestIteration10$$ -binary-path=cmd/shortener/shortener -source-path=. -database-dsn=postgresql://yandex@localhost:5432/yandex
+
+PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10

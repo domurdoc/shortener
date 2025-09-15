@@ -24,6 +24,7 @@ vendor/
 .vscode
 
 db.json
+*.sqlite3
 
 shortenertest*
 statictest*

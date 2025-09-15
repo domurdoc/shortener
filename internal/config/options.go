@@ -1,32 +1,39 @@
 package config
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type Options struct {
 	Addr            NetAddress
 	BaseURL         URL
 	LogLevel        LogLevel
 	FileStoragePath FilePath
+	DatabaseDSN     DataSourceName
 }
 
 func (o Options) String() string {
 	return fmt.Sprintf(
-		"addr = %q; baseURL = %q; logLevel = %q; fileStoragePath = %q",
+		"addr = %q; baseURL = %q; logLevel = %q; fileStoragePath = %q; databaseDSB = %q",
 		o.Addr,
 		o.BaseURL,
 		o.LogLevel,
 		o.FileStoragePath,
+		o.DatabaseDSN,
 	)
 }
 
-func New(defaultAddr, defaultBaseURL, defaultLogLevel, defaultStoragePath string) *Options {
+func New(
+	addr,
+	baseURL,
+	logLevel,
+	storagePath,
+	databaseDSN string,
+) *Options {
 	options := Options{}
-	setOptionFromString(&options.BaseURL, defaultBaseURL)
-	setOptionFromString(&options.Addr, defaultAddr)
-	setOptionFromString(&options.LogLevel, defaultLogLevel)
-	setOptionFromString(&options.FileStoragePath, defaultStoragePath)
+	setOptionFromString(&options.BaseURL, baseURL)
+	setOptionFromString(&options.Addr, addr)
+	setOptionFromString(&options.LogLevel, logLevel)
+	setOptionFromString(&options.FileStoragePath, storagePath)
+	setOptionFromString(&options.DatabaseDSN, databaseDSN)
 	return &options
 }
 
