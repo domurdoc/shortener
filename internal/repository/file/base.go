@@ -37,28 +37,33 @@ type serializer interface {
 }
 
 func (s *FileRepo) Store(ctx context.Context, key repository.Key, value repository.Value) error {
+	return s.StoreBatch(ctx, repository.SingleItemBatch(key, value))
+}
+
+func (s *FileRepo) StoreBatch(ctx context.Context, batchItems []repository.BatchItem) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	storage, err := s.load()
 	if err != nil {
 		return err
 	}
-	r, exists := storage[key]
-	if !exists {
-		storage[key] = record{
-			ID:    nextSeq(storage),
-			Key:   key,
-			Value: value,
+	for _, item := range batchItems {
+		if _, exists := storage[item.Key]; exists {
+			return &repository.KeyAlreadyExistsError{Key: item.Key}
 		}
-		if err := s.dump(storage); err != nil {
-			return err
+	}
+	seq := nextSeq(storage)
+	for i, item := range batchItems {
+		storage[item.Key] = record{
+			ID:    seq + i,
+			Key:   item.Key,
+			Value: item.Value,
 		}
-		return nil
 	}
-	if r.Value == value {
-		return nil
+	if err := s.dump(storage); err != nil {
+		return err
 	}
-	return &repository.KeyAlreadyExistsError{Key: key}
+	return nil
 }
 
 func (s *FileRepo) Fetch(ctx context.Context, key repository.Key) (repository.Value, error) {

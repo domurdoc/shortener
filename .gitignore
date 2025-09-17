@@ -23,8 +23,9 @@ vendor/
 .idea
 .vscode
 
-db.json
+*.json
 *.sqlite3
+*.csv
 
 shortenertest*
 statictest*
