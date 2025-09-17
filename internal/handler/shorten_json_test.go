@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/domurdoc/shortener/internal/httputil"
-	"github.com/domurdoc/shortener/internal/repository"
+	"github.com/domurdoc/shortener/internal/repository/mem"
 	"github.com/domurdoc/shortener/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -86,7 +86,7 @@ func TestShortener_ShortenJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(service.New(repository.NewMemRepo(), "http://localhost:8081"), nil)
+			handler := New(service.New(mem.New(), "http://localhost:8081"))
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
 			r.Header.Set(httputil.HeaderContentType, tt.contentType)
