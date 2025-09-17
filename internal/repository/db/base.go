@@ -24,29 +24,38 @@ type vendor struct {
 }
 
 func (r *DBRepo) Store(ctx context.Context, key repository.Key, value repository.Value) error {
-	_, err := r.db.ExecContext(
-		ctx,
-		r.vendor.queryStore,
-		key,
-		value,
-	)
-	var e *UniqueConstraintError
-	err = r.vendor.mapError(err)
-	if errors.As(err, &e) {
-		return &repository.KeyAlreadyExistsError{Key: key}
-	}
+	return r.StoreBatch(ctx, repository.SingleItemBatch(key, value))
+}
+
+func (r *DBRepo) StoreBatch(ctx context.Context, batchItems []repository.BatchItem) error {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
-	return nil
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareContext(ctx, r.vendor.queryStore)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, item := range batchItems {
+		_, err := stmt.ExecContext(ctx, item.Key, item.Value)
+		var e *UniqueConstraintError
+		err = r.vendor.mapError(err)
+		if errors.As(err, &e) {
+			return &repository.KeyAlreadyExistsError{Key: item.Key}
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func (r *DBRepo) Fetch(ctx context.Context, key repository.Key) (repository.Value, error) {
-	row := r.db.QueryRowContext(
-		ctx,
-		r.vendor.queryFetch,
-		key,
-	)
+	row := r.db.QueryRowContext(ctx, r.vendor.queryFetch, key)
 	var rawValue string
 	err := row.Scan(&rawValue)
 	if errors.Is(err, sql.ErrNoRows) {

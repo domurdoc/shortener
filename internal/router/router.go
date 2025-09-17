@@ -22,6 +22,7 @@ func setupRoutes(router *chi.Mux, handler *handler.Handler) {
 	router.Get("/ping", handler.Ping)
 	router.Get("/{shortCode}", handler.Retrieve)
 	router.Post("/api/shorten", handler.ShortenJSON)
+	router.Post("/api/shorten/batch", handler.ShortenBatchJSON)
 }
 
 func setupMiddleware(router *chi.Mux, log *zap.SugaredLogger) http.Handler {
