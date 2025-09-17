@@ -1,29 +1,29 @@
 package service
 
 import (
-	"crypto/rand"
+	"context"
 	"errors"
 	"net/url"
 
 	"github.com/domurdoc/shortener/internal/repository"
 )
 
+// 2048 - max url length (RFC)
+const URLMaxLength = 2048
+
 type Shortener struct {
 	repo    repository.Repo
 	baseURL string
 }
 
-const (
-	charSet         = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	shortCodeLength = 6
-	charSetLength   = len(charSet)
-)
-
 func New(repo repository.Repo, baseURL string) *Shortener {
 	return &Shortener{repo: repo, baseURL: baseURL}
 }
 
-func (s *Shortener) Shorten(longURL string) (string, error) {
+func (s *Shortener) Shorten(ctx context.Context, longURL string) (string, error) {
+	if len(longURL) > URLMaxLength {
+		return "", &URLError{msg: "url too long", url: longURL}
+	}
 	parsedLongURL, err := url.Parse(longURL)
 	if err != nil {
 		return "", &URLError{msg: err.Error(), url: longURL}
@@ -39,11 +39,11 @@ func (s *Shortener) Shorten(longURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return shortURL, s.repo.Store(repository.Key(shortCode), repository.Value(longURL))
+	return shortURL, s.repo.Store(ctx, repository.Key(shortCode), repository.Value(longURL))
 }
 
-func (s *Shortener) GetByShortCode(shortCode string) (string, error) {
-	url, err := s.repo.Fetch(repository.Key(shortCode))
+func (s *Shortener) GetByShortCode(ctx context.Context, shortCode string) (string, error) {
+	url, err := s.repo.Fetch(ctx, repository.Key(shortCode))
 	var keyNotFoundError *repository.KeyNotFoundError
 	if errors.As(err, &keyNotFoundError) {
 		return "", &NotFoundError{shortCode: shortCode}
@@ -54,12 +54,8 @@ func (s *Shortener) GetByShortCode(shortCode string) (string, error) {
 	return string(url), nil
 }
 
-func generateShortCode() string {
-	// https://stackoverflow.com/a/67035900
-	buf := make([]byte, shortCodeLength)
-	rand.Read(buf)
-	for i := range shortCodeLength {
-		buf[i] = charSet[int(buf[i])%charSetLength]
-	}
-	return string(buf)
+func (s *Shortener) HealthCheck(ctx context.Context) error {
+	e := make([]error, 0)
+	e = append(e, s.repo.Ping(ctx))
+	return errors.Join(e...)
 }

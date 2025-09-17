@@ -6,10 +6,10 @@ import (
 	"time"
 )
 
-func (h *Shortener) Ping(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Ping(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 1*time.Second)
 	defer cancel()
-	if err := h.db.PingContext(ctx); err != nil {
+	if err := h.service.HealthCheck(ctx); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

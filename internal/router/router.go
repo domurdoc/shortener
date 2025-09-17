@@ -11,16 +11,16 @@ import (
 	"go.uber.org/zap"
 )
 
-func New(handler *handler.Shortener, log *zap.SugaredLogger) http.Handler {
+func New(handler *handler.Handler, log *zap.SugaredLogger) http.Handler {
 	router := chi.NewRouter()
 	setupRoutes(router, handler)
 	return setupMiddleware(router, log)
 }
 
-func setupRoutes(router *chi.Mux, handler *handler.Shortener) {
+func setupRoutes(router *chi.Mux, handler *handler.Handler) {
 	router.Post("/", handler.Shorten)
 	router.Get("/ping", handler.Ping)
-	router.Get("/{shortCode}", handler.GetByShortCode)
+	router.Get("/{shortCode}", handler.Retrieve)
 	router.Post("/api/shorten", handler.ShortenJSON)
 }
 
