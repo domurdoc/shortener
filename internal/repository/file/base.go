@@ -1,28 +1,42 @@
-package repository
+package file
 
 import (
+	"context"
 	"io"
 	"maps"
 	"os"
 	"slices"
 	"sync"
+
+	"github.com/domurdoc/shortener/internal/repository"
 )
 
 type FileRepo struct {
 	path       string
 	mu         sync.Mutex // TODO: use file lock
-	serializer Serializer
+	serializer serializer
 }
 
-func NewFileRepo(path string, serializer Serializer) *FileRepo {
+func New(path string, serializer serializer) *FileRepo {
 	repo := FileRepo{path: path, serializer: serializer}
-	if _, err := repo.load(); err != nil {
+	if err := repo.Ping(context.Background()); err != nil {
 		panic(err)
 	}
 	return &repo
 }
 
-func (s *FileRepo) Store(key Key, value Value) error {
+type record struct {
+	ID    int
+	Key   repository.Key
+	Value repository.Value
+}
+
+type serializer interface {
+	Dump([]record) ([]byte, error)
+	Load([]byte) ([]record, error)
+}
+
+func (s *FileRepo) Store(ctx context.Context, key repository.Key, value repository.Value) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	storage, err := s.load()
@@ -31,7 +45,7 @@ func (s *FileRepo) Store(key Key, value Value) error {
 	}
 	r, exists := storage[key]
 	if !exists {
-		storage[key] = Record{
+		storage[key] = record{
 			ID:    nextSeq(storage),
 			Key:   key,
 			Value: value,
@@ -44,10 +58,10 @@ func (s *FileRepo) Store(key Key, value Value) error {
 	if r.Value == value {
 		return nil
 	}
-	return &KeyAlreadyExistsError{key: key}
+	return &repository.KeyAlreadyExistsError{Key: key}
 }
 
-func (s *FileRepo) Fetch(key Key) (Value, error) {
+func (s *FileRepo) Fetch(ctx context.Context, key repository.Key) (repository.Value, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	storage, err := s.load()
@@ -56,13 +70,22 @@ func (s *FileRepo) Fetch(key Key) (Value, error) {
 	}
 	r, exists := storage[key]
 	if !exists {
-		return "", &KeyNotFoundError{key: key}
+		return "", &repository.KeyNotFoundError{Key: key}
 	}
 	return r.Value, nil
 }
 
-func (s *FileRepo) load() (map[Key]Record, error) {
-	storage := make(map[Key]Record)
+func (s *FileRepo) Ping(ctx context.Context) error {
+	_, err := s.load()
+	return err
+}
+
+func (s *FileRepo) Close() error {
+	return nil
+}
+
+func (s *FileRepo) load() (map[repository.Key]record, error) {
+	storage := make(map[repository.Key]record)
 	file, err := os.OpenFile(s.path, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
@@ -82,7 +105,7 @@ func (s *FileRepo) load() (map[Key]Record, error) {
 	return storage, nil
 }
 
-func (s *FileRepo) dump(storage map[Key]Record) error {
+func (s *FileRepo) dump(storage map[repository.Key]record) error {
 	file, err := os.OpenFile(s.path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
@@ -97,7 +120,7 @@ func (s *FileRepo) dump(storage map[Key]Record) error {
 	return err
 }
 
-func nextSeq(storage map[Key]Record) int {
+func nextSeq(storage map[repository.Key]record) int {
 	maxID := 0
 	for _, r := range storage {
 		if r.ID > maxID {

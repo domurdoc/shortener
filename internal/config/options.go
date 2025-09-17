@@ -1,24 +1,11 @@
 package config
 
-import "fmt"
-
 type Options struct {
 	Addr            NetAddress
 	BaseURL         URL
 	LogLevel        LogLevel
 	FileStoragePath FilePath
 	DatabaseDSN     DataSourceName
-}
-
-func (o Options) String() string {
-	return fmt.Sprintf(
-		"addr = %q; baseURL = %q; logLevel = %q; fileStoragePath = %q; databaseDSB = %q",
-		o.Addr,
-		o.BaseURL,
-		o.LogLevel,
-		o.FileStoragePath,
-		o.DatabaseDSN,
-	)
 }
 
 func New(

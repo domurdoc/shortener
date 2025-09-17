@@ -1,14 +1,16 @@
-package repository
+package file
 
 import (
 	"encoding/json"
 	"strconv"
+
+	"github.com/domurdoc/shortener/internal/repository"
 )
 
 type jsonRecord struct {
-	ID          int   `json:"UUID"`
-	ShortURL    Key   `json:"short_url"`
-	OriginalURL Value `json:"original_url"`
+	ID          int              `json:"UUID"`
+	ShortURL    repository.Key   `json:"short_url"`
+	OriginalURL repository.Value `json:"original_url"`
 }
 
 func (r jsonRecord) MarshalJSON() ([]byte, error) {
@@ -40,7 +42,7 @@ func (r *jsonRecord) UnmarshalJSON(data []byte) (err error) {
 	return
 }
 
-func toJSONRecord(r Record) jsonRecord {
+func toJSONRecord(r record) jsonRecord {
 	return jsonRecord{
 		ID:          r.ID,
 		ShortURL:    r.Key,
@@ -48,8 +50,8 @@ func toJSONRecord(r Record) jsonRecord {
 	}
 }
 
-func fromJSONRecord(jr jsonRecord) Record {
-	return Record{
+func fromJSONRecord(jr jsonRecord) record {
+	return record{
 		ID:    jr.ID,
 		Key:   jr.ShortURL,
 		Value: jr.OriginalURL,
@@ -58,7 +60,7 @@ func fromJSONRecord(jr jsonRecord) Record {
 
 type JSONSerializer struct{}
 
-func (s *JSONSerializer) Dump(records []Record) ([]byte, error) {
+func (s *JSONSerializer) Dump(records []record) ([]byte, error) {
 	jsonRecords := make([]jsonRecord, 0, len(records))
 	for _, r := range records {
 		jsonRecords = append(jsonRecords, toJSONRecord(r))
@@ -66,16 +68,16 @@ func (s *JSONSerializer) Dump(records []Record) ([]byte, error) {
 	return json.Marshal(jsonRecords)
 }
 
-func (s *JSONSerializer) Load(data []byte) ([]Record, error) {
+func (s *JSONSerializer) Load(data []byte) ([]record, error) {
 	var jsonRecords []jsonRecord
-	var records []Record
+	var records []record
 	if len(data) == 0 {
 		return records, nil
 	}
 	if err := json.Unmarshal(data, &jsonRecords); err != nil {
 		return nil, err
 	}
-	records = make([]Record, 0, len(jsonRecords))
+	records = make([]record, 0, len(jsonRecords))
 	for _, jr := range jsonRecords {
 		records = append(records, fromJSONRecord(jr))
 	}

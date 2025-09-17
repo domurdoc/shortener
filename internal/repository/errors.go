@@ -3,17 +3,17 @@ package repository
 import "fmt"
 
 type KeyNotFoundError struct {
-	key Key
+	Key Key
 }
 
 func (e *KeyNotFoundError) Error() string {
-	return fmt.Sprintf("Key %q not found", e.key)
+	return fmt.Sprintf("Key %q not found", e.Key)
 }
 
 type KeyAlreadyExistsError struct {
-	key Key
+	Key Key
 }
 
 func (e *KeyAlreadyExistsError) Error() string {
-	return fmt.Sprintf("Key %q already exists", e.key)
+	return fmt.Sprintf("Key %q already exists", e.Key)
 }

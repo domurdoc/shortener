@@ -11,7 +11,7 @@ re:
 kill:
 	killall -9 shortener || true
 
-test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10
+test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11
 
 test1: kill
 	./shortenertest -test.v -test.run=^TestIteration1$$ -binary-path=cmd/shortener/shortener
@@ -41,6 +41,9 @@ test9: kill
 	./shortenertest -test.v -test.run=^TestIteration9$$ -binary-path=cmd/shortener/shortener -source-path=. -file-storage-path=db.json
 
 test10: kill
-	./shortenertest -test.v -test.run=^TestIteration10$$ -binary-path=cmd/shortener/shortener -source-path=. -database-dsn=postgresql://yandex@localhost:5432/yandex
+	./shortenertest -test.v -test.run=^TestIteration10$$ -binary-path=cmd/shortener/shortener -source-path=. -database-dsn=postgresql://domurdoc@localhost:5432/test
 
-PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10
+test11: kill
+	./shortenertest -test.v -test.run=^TestIteration11$$ -binary-path=cmd/shortener/shortener -database-dsn=postgresql://domurdoc@localhost:5432/test
+
+PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11
