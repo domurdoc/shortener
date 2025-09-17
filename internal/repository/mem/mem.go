@@ -17,17 +17,21 @@ func New() *MemRepo {
 }
 
 func (s *MemRepo) Store(ctx context.Context, key repository.Key, value repository.Value) error {
+	return s.StoreBatch(ctx, repository.SingleItemBatch(key, value))
+}
+
+func (s *MemRepo) StoreBatch(ctx context.Context, batchItems []repository.BatchItem) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	value0, exists := s.storage[key]
-	if !exists {
-		s.storage[key] = value
-		return nil
+	for _, item := range batchItems {
+		if _, exists := s.storage[item.Key]; exists {
+			return &repository.KeyAlreadyExistsError{Key: item.Key}
+		}
 	}
-	if value0 == value {
-		return nil
+	for _, item := range batchItems {
+		s.storage[item.Key] = item.Value
 	}
-	return &repository.KeyAlreadyExistsError{Key: key}
+	return nil
 }
 
 func (s *MemRepo) Fetch(ctx context.Context, key repository.Key) (repository.Value, error) {
