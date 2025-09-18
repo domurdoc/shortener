@@ -86,3 +86,16 @@ func (f *FilePath) Set(value string) error {
 	f.path = strings.TrimSpace(value)
 	return nil
 }
+
+type DataSourceName struct {
+	dsn string
+}
+
+func (d *DataSourceName) Set(value string) error {
+	d.dsn = value
+	return nil
+}
+
+func (d DataSourceName) String() string {
+	return d.dsn
+}

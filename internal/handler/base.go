@@ -4,10 +4,10 @@ import (
 	"github.com/domurdoc/shortener/internal/service"
 )
 
-type Shortener struct {
+type Handler struct {
 	service *service.Shortener
 }
 
-func New(shortenerService *service.Shortener) *Shortener {
-	return &Shortener{service: shortenerService}
+func New(shortenerService *service.Shortener) *Handler {
+	return &Handler{service: shortenerService}
 }

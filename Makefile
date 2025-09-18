@@ -1,44 +1,71 @@
+BIN = cmd/shortener/shortener
+PORT = 8080
+DSN = postgresql://domurdoc@localhost:5432/test?sslmode=disable
+FILE = db.json
+DIR = .
+MAIN = cmd/shortener/main.go
+MNAME = unnamed
+TESTBIN = shortenertest
+
+
 run:
-	go run ./cmd/shortener/main.go
+	go run ${MAIN} -d ${DSN}
 
 exe:
-	./cmd/shortener/shortener
+	./${BIN}
 
 re:
-	killall -9 shortener || true
-	rm -f cmd/shortener/shortener
-	go build -o cmd/shortener/shortener cmd/shortener/main.go
+	rm -f ${BIN}
+	go build -o ${BIN} ${MAIN}
 
 kill:
-	killall -9 shortener
+	killall -9 shortener || true
 
-test: test1 test2 test3 test4 test5 test6 test7 test8 test9
+mm:
+	migrate create -ext sql -dir ./migrations -seq ${MNAME}
 
-test1:
-	./shortenertest -test.v -test.run=^TestIteration1$$ -binary-path=cmd/shortener/shortener
+m:
+	migrate -database "${DSN}" -path ./migrations up 
 
-test2:
-	./shortenertest -test.v -test.run=^TestIteration2$$ -source-path=.
+test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13
 
-test3:
-	./shortenertest -test.v -test.run=^TestIteration3$$ -source-path=.
+test1: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration1$$ -binary-path=${BIN}
 
-test4:
-	./shortenertest -test.v -test.run=^TestIteration4$$ -binary-path=cmd/shortener/shortener -server-port=8080
+test2: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration2$$ -source-path=${DIR}
 
-test5:
-	SERVER_PORT=8080 ./shortenertest -test.v -test.run=^TestIteration5$$ -binary-path=cmd/shortener/shortener -server-port=8080
+test3: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration3$$ -source-path=${DIR}
 
-test6:
-	./shortenertest -test.v -test.run=^TestIteration6$$ -source-path=.
+test4: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration4$$ -binary-path=${BIN} -server-port=${PORT}
 
-test7:
-	./shortenertest -test.v -test.run=^TestIteration7$$ -binary-path=cmd/shortener/shortener -source-path=.
+test5: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration5$$ -binary-path=${BIN} -server-port=${PORT}
 
-test8:
-	./shortenertest -test.v -test.run=^TestIteration8$$ -binary-path=cmd/shortener/shortener
+test6: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration6$$ -source-path=${DIR}
 
-test9:
-	./shortenertest -test.v -test.run=^TestIteration9$$ -binary-path=cmd/shortener/shortener -source-path=. -file-storage-path=db.json
+test7: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration7$$ -binary-path=${BIN} -source-path=${DIR}
 
-PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8 test9
+test8: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration8$$ -binary-path=${BIN}
+
+test9: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration9$$ -binary-path=${BIN} -source-path=${DIR} -file-storage-path=${FILE}
+
+test10: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration10$$ -binary-path=${BIN} -source-path=${DIR} -database-dsn=${DSN}
+
+test11: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration11$$ -binary-path=${BIN} -database-dsn=${DSN}
+
+test12: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration12$$ -binary-path=${BIN} -database-dsn=${DSN}
+
+test13: kill
+	./${TESTBIN} -test.v -test.run=^TestIteration13$$ -binary-path=${BIN} -database-dsn=${DSN}
+
+PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13

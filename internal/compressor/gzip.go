@@ -26,7 +26,7 @@ func (c *compressWriter) Write(p []byte) (int, error) {
 }
 
 func (c *compressWriter) WriteHeader(statusCode int) {
-	if httputil.HasContentType(
+	if !httputil.HasHeader(c.w.Header(), httputil.HeaderContentType) || httputil.HasContentType(
 		c.w.Header(),
 		httputil.ContentTypeJSON,
 		httputil.ContentTypeTextPlain,

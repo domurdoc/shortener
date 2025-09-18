@@ -18,6 +18,10 @@ const (
 	HeaderAcceptEncoding  = "Accept-Encoding"
 )
 
+func HasHeader(headers http.Header, header string) bool {
+	return headers.Get(header) != ""
+}
+
 func HasContentType(headers http.Header, contentTypes ...string) bool {
 	return hasHeaderValue(headers, HeaderContentType, contentTypes...)
 }
