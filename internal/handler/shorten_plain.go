@@ -23,11 +23,19 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if errors.Is(err, service.ErrURLConflict) {
+		writeShortURL(w, http.StatusConflict, shortURL)
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	writeShortURL(w, http.StatusCreated, shortURL)
+}
+
+func writeShortURL(w http.ResponseWriter, status int, shortURL string) {
 	httputil.SetContentType(w.Header(), httputil.ContentTypeTextPlain)
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(status)
 	w.Write([]byte(shortURL))
 }

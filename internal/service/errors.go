@@ -1,6 +1,9 @@
 package service
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type URLError struct {
 	msg string
@@ -18,3 +21,5 @@ type NotFoundError struct {
 func (e *NotFoundError) Error() string {
 	return fmt.Sprintf("URL for code %q not found", e.shortCode)
 }
+
+var ErrURLConflict = errors.New("URL has been processed before")

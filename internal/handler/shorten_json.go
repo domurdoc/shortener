@@ -36,12 +36,20 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if errors.Is(err, service.ErrURLConflict) {
+		writeShortURLJSON(w, http.StatusConflict, shortURL)
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	writeShortURLJSON(w, http.StatusCreated, shortURL)
+}
+
+func writeShortURLJSON(w http.ResponseWriter, status int, shortURL string) {
 	httputil.SetContentType(w.Header(), httputil.ContentTypeJSON)
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(status)
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(jsonResponse{Result: shortURL}); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

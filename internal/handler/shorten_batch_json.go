@@ -48,17 +48,25 @@ func (h *Handler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if errors.Is(err, service.ErrURLConflict) {
+		writeShortURLBatchJSON(w, http.StatusConflict, shortURLS, reqItems)
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	writeShortURLBatchJSON(w, http.StatusCreated, shortURLS, reqItems)
+}
+
+func writeShortURLBatchJSON(w http.ResponseWriter, status int, shortURLS []string, reqItems []jsonBatchRequestItem) {
 	resItems := make([]jsonBatchResponseItem, len(reqItems))
 	for i, jsonRequest := range reqItems {
 		resItems[i] = jsonBatchResponseItem{CID: jsonRequest.CID, ShortURL: shortURLS[i]}
 	}
 
 	httputil.SetContentType(w.Header(), httputil.ContentTypeJSON)
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(status)
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(resItems); err != nil {

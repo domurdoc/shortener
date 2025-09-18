@@ -37,8 +37,7 @@ func bootRepo(databaseDSN, fileStoragePath string) repository.Repo {
 	if databaseDSN != "" {
 		pgDB := db.NewPG(databaseDSN)
 		db.MigratePG(pgDB)
-		pgVendor := dbRepo.NewPGVendor()
-		return dbRepo.New(pgDB, *pgVendor)
+		return dbRepo.New(pgDB, dbRepo.NewPGArger)
 	}
 	if fileStoragePath != "" {
 		jsonSerializer := fileRepo.NewJSONSerializer()
