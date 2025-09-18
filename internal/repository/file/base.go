@@ -2,6 +2,7 @@ package file
 
 import (
 	"context"
+	"errors"
 	"io"
 	"maps"
 	"os"
@@ -37,31 +38,52 @@ type serializer interface {
 }
 
 func (s *FileRepo) Store(ctx context.Context, key repository.Key, value repository.Value) error {
-	return s.StoreBatch(ctx, repository.SingleItemBatch(key, value))
+	err := s.StoreBatch(ctx, repository.SingleItemBatch(key, value))
+	var e repository.BatchError
+	if errors.As(err, &e) {
+		return (e)[0]
+	}
+	return err
 }
 
 func (s *FileRepo) StoreBatch(ctx context.Context, batchItems []repository.BatchItem) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	storage, err := s.load()
+	keyStorage, err := s.load()
 	if err != nil {
 		return err
 	}
+	valueStorage := toValueStorage(keyStorage)
 	for _, item := range batchItems {
-		if _, exists := storage[item.Key]; exists {
+		if _, exists := keyStorage[item.Key]; exists {
 			return &repository.KeyAlreadyExistsError{Key: item.Key}
 		}
 	}
-	seq := nextSeq(storage)
-	for i, item := range batchItems {
-		storage[item.Key] = record{
-			ID:    seq + i,
-			Key:   item.Key,
-			Value: item.Value,
+	seq := nextSeq(keyStorage)
+	var batchError repository.BatchError
+	for pos, item := range batchItems {
+		returnedRecord, exists := valueStorage[item.Value]
+		if !exists {
+			record := record{
+				ID:    seq,
+				Key:   item.Key,
+				Value: item.Value,
+			}
+			valueStorage[item.Value] = record
+			keyStorage[item.Key] = record
+			seq++
+			continue
+		}
+		if returnedRecord.Key != item.Key {
+			valueErr := &repository.ValueAlreadyExistsError{Key: returnedRecord.Key, Value: item.Value, Pos: pos}
+			batchError = append(batchError, valueErr)
 		}
 	}
-	if err := s.dump(storage); err != nil {
+	if err := s.dump(keyStorage); err != nil {
 		return err
+	}
+	if len(batchError) != 0 {
+		return batchError
 	}
 	return nil
 }
@@ -133,4 +155,12 @@ func nextSeq(storage map[repository.Key]record) int {
 		}
 	}
 	return maxID + 1
+}
+
+func toValueStorage(keyStorage map[repository.Key]record) map[repository.Value]record {
+	valueStorage := make(map[repository.Value]record, len(keyStorage))
+	for _, r := range keyStorage {
+		valueStorage[r.Value] = r
+	}
+	return valueStorage
 }

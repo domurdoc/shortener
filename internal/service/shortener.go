@@ -25,7 +25,19 @@ func (s *Shortener) Shorten(ctx context.Context, longURL string) (string, error)
 	if err != nil {
 		return "", err
 	}
-	return shortURL, s.repo.Store(ctx, repository.Key(shortCode), repository.Value(longURL))
+	err = s.repo.Store(ctx, repository.Key(shortCode), repository.Value(longURL))
+	var valueErr *repository.ValueAlreadyExistsError
+	if errors.As(err, &valueErr) {
+		shortURL, err = url.JoinPath(s.baseURL, string(valueErr.Key))
+		if err != nil {
+			return "", err
+		}
+		return shortURL, ErrURLConflict
+	}
+	if err != nil {
+		return "", err
+	}
+	return shortURL, nil
 }
 
 func (s *Shortener) GetByShortCode(ctx context.Context, shortCode string) (string, error) {
@@ -53,7 +65,19 @@ func (s *Shortener) ShortenBatch(ctx context.Context, longURLS []string) ([]stri
 		shortURLS[i] = shortURL
 		batchItems[i] = repository.BatchItem{Key: repository.Key(shortCode), Value: repository.Value(longURL)}
 	}
-	if err := s.repo.StoreBatch(ctx, batchItems); err != nil {
+	err := s.repo.StoreBatch(ctx, batchItems)
+	var batchError repository.BatchError
+	if errors.As(err, &batchError) {
+		for _, e := range batchError {
+			shortURL, err := url.JoinPath(s.baseURL, string(e.Key))
+			if err != nil {
+				return nil, err
+			}
+			shortURLS[e.Pos] = shortURL
+		}
+		return shortURLS, ErrURLConflict
+	}
+	if err != nil {
 		return nil, err
 	}
 	return shortURLS, nil
