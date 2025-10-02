@@ -10,6 +10,13 @@ import (
 )
 
 func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	user, err := h.authenticate(ctx, w, r)
+	if err != nil {
+		return
+	}
+
 	buf := make([]byte, service.URLMaxLength)
 	n, err := r.Body.Read(buf)
 	if err != nil && err != io.EOF {
@@ -17,24 +24,20 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	longURL := string(buf[:n])
-	shortURL, err := h.service.Shorten(r.Context(), longURL)
+	shortURL, err := h.service.Shorten(ctx, user, longURL)
 	var urlError *service.URLError
 	if errors.As(err, &urlError) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if errors.Is(err, service.ErrURLConflict) {
-		writeShortURL(w, http.StatusConflict, shortURL)
-		return
-	}
-	if err != nil {
+	if err != nil && !errors.Is(err, service.ErrURLConflict) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeShortURL(w, http.StatusCreated, shortURL)
-}
-
-func writeShortURL(w http.ResponseWriter, status int, shortURL string) {
+	status := http.StatusCreated
+	if err != nil {
+		status = http.StatusConflict
+	}
 	httputil.SetContentType(w.Header(), httputil.ContentTypeTextPlain)
 	w.WriteHeader(status)
 	w.Write([]byte(shortURL))

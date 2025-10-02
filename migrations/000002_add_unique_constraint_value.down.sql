@@ -1,1 +1,2 @@
-DROP CONSTRAINT IF EXISTS unique_records_value;
+ALTER TABLE
+    records DROP CONSTRAINT IF EXISTS unique_records_value;

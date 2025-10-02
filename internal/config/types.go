@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type LogLevel struct {
@@ -73,29 +74,28 @@ func (u *URL) Set(value string) error {
 	return nil
 }
 
-type FilePath struct {
-	path string
-}
+type String string
 
-func (f FilePath) String() string {
-	return f.path
-}
-
-func (f *FilePath) Set(value string) error {
-	// TODO: add validation
-	f.path = strings.TrimSpace(value)
+func (s *String) Set(value string) error {
+	*s = String(value)
 	return nil
 }
 
-type DataSourceName struct {
-	dsn string
+func (s String) String() string {
+	return string(s)
 }
 
-func (d *DataSourceName) Set(value string) error {
-	d.dsn = value
+type Duration time.Duration
+
+func (d *Duration) Set(value string) error {
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return err
+	}
+	*d = Duration(duration)
 	return nil
 }
 
-func (d DataSourceName) String() string {
-	return d.dsn
+func (d Duration) String() string {
+	return time.Duration(d).String()
 }

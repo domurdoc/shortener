@@ -2,31 +2,26 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/domurdoc/shortener/internal/app"
-	"github.com/domurdoc/shortener/internal/config"
+	"github.com/domurdoc/shortener/internal/router"
 )
 
 func main() {
-	options := config.LoadOptions()
-	// TODO: add App struct?
-	repo, log, router := app.Boot(
-		options.LogLevel.String(),
-		options.BaseURL.String(),
-		options.DatabaseDSN.String(),
-		options.FileStoragePath.String(),
-	)
-	defer repo.Close()
-	defer log.Sync()
-
-	log.Infow(
+	a, err := app.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer a.Close()
+	a.Log.Infow(
 		"starting server",
-		"addr", options.Addr,
-		"baseURL", options.BaseURL,
-		"logLevel", options.LogLevel,
-		"fileStoragePath", options.FileStoragePath,
-		"databaseDSN", options.DatabaseDSN,
-		"repo", fmt.Sprintf("%T", repo),
+		"addr", a.Options.Addr,
+		"baseURL", a.Options.BaseURL,
+		"logLevel", a.Options.LogLevel,
+		"fileStoragePath", a.Options.FileStoragePath,
+		"databaseDSN", a.Options.DatabaseDSN,
+		"repo", fmt.Sprintf("%T", a.RecordRepo),
 	)
-	app.Run(router, options.Addr.String(), log)
+	log.Fatal(router.Run(a.Service, a.Auth, a.DB, a.Log, a.Options.Addr.String()))
 }

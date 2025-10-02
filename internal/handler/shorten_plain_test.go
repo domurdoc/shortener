@@ -8,11 +8,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/domurdoc/shortener/internal/auth"
+	"github.com/domurdoc/shortener/internal/auth/strategy"
+	"github.com/domurdoc/shortener/internal/auth/transport"
 	"github.com/domurdoc/shortener/internal/httputil"
 	"github.com/domurdoc/shortener/internal/repository/mem"
 	"github.com/domurdoc/shortener/internal/service"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestShortener_Shorten(t *testing.T) {
@@ -62,7 +66,16 @@ func TestShortener_Shorten(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := New(service.New(mem.New(), tt.baseURL))
+			debugStrategy := strategy.NewDebug()
+			bearerTransport := transport.NewBearer("Authorization")
+			userRepo := mem.NewMemUserRepo()
+
+			auth := auth.New(
+				debugStrategy,
+				bearerTransport,
+				userRepo,
+			)
+			handler := New(service.New(mem.NewMemRecordRepo(), tt.baseURL), auth, nil)
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			w := httptest.NewRecorder()

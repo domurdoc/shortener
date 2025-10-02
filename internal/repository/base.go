@@ -1,25 +1,19 @@
 package repository
 
-import "context"
+import (
+	"context"
 
-type (
-	Key   string
-	Value string
+	"github.com/domurdoc/shortener/internal/model"
 )
 
-type BatchItem struct {
-	Key   Key
-	Value Value
+type RecordRepo interface {
+	Store(context.Context, *model.Record, model.UserID) error
+	Fetch(context.Context, model.ShortCode) (*model.Record, error)
+	FetchForUser(context.Context, model.UserID) ([]model.Record, error)
+	StoreBatch(context.Context, []model.Record, model.UserID) error
 }
 
-type Repo interface {
-	Store(context.Context, Key, Value) error
-	Fetch(context.Context, Key) (Value, error)
-	StoreBatch(context.Context, []BatchItem) error
-	Ping(context.Context) error
-	Close() error
-}
-
-func SingleItemBatch(key Key, value Value) []BatchItem {
-	return []BatchItem{{Key: key, Value: value}}
+type UserRepo interface {
+	GetUser(context.Context, model.UserID) (*model.User, error)
+	CreateUser(context.Context) (*model.User, error)
 }

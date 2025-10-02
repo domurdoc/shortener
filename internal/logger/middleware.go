@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/domurdoc/shortener/internal/httputil"
 	"go.uber.org/zap"
+
+	"github.com/domurdoc/shortener/internal/httputil"
 )
 
 type requestData struct {
@@ -39,7 +40,8 @@ func NewRequestLogger(log *zap.SugaredLogger) httputil.Middleware {
 			w = loggingResponseWriter{w, &requestData}
 			h.ServeHTTP(w, r)
 			duration := time.Since(start)
-			log.Infoln(
+			log.Infow(
+				"request",
 				"uri", uri,
 				"method", method,
 				"duration", duration,

@@ -6,7 +6,7 @@ DIR = .
 MAIN = cmd/shortener/main.go
 MNAME = unnamed
 TESTBIN = shortenertest
-
+WIPEDBBIN = wipedb
 
 run:
 	go run ${MAIN} -d ${DSN}
@@ -25,9 +25,12 @@ mm:
 	migrate create -ext sql -dir ./migrations -seq ${MNAME}
 
 m:
-	migrate -database "${DSN}" -path ./migrations up 
+	migrate -database "${DSN}" -path ./migrations up
 
-test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13
+md:
+	migrate -database "${DSN}" -path ./migrations down 1
+
+test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14
 
 test1: kill
 	./${TESTBIN} -test.v -test.run=^TestIteration1$$ -binary-path=${BIN}
@@ -68,4 +71,7 @@ test12: kill
 test13: kill
 	./${TESTBIN} -test.v -test.run=^TestIteration13$$ -binary-path=${BIN} -database-dsn=${DSN}
 
-PHONY: run exe re test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13
+test14: kill re
+	./${TESTBIN} -test.v -test.run=^TestIteration14$$ -binary-path=${BIN} -database-dsn=${DSN}
+
+PHONY: run exe re kill m mm md test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14

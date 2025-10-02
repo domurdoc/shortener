@@ -6,11 +6,16 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/domurdoc/shortener/internal/repository"
-	"github.com/domurdoc/shortener/internal/repository/mem"
-	"github.com/domurdoc/shortener/internal/service"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/domurdoc/shortener/internal/auth"
+
+	"github.com/domurdoc/shortener/internal/auth/strategy"
+	"github.com/domurdoc/shortener/internal/auth/transport"
+	"github.com/domurdoc/shortener/internal/model"
+	"github.com/domurdoc/shortener/internal/repository/mem"
+	"github.com/domurdoc/shortener/internal/service"
 )
 
 func TestShortener_Retrieve(t *testing.T) {
@@ -41,11 +46,26 @@ func TestShortener_Retrieve(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := mem.New()
-			handler := New(service.New(repo, ""))
+			debugStrategy := strategy.NewDebug()
+			bearerTransport := transport.NewBearer("Authorization")
+			userRepo := mem.NewMemUserRepo()
+
+			auth := auth.New(
+				debugStrategy,
+				bearerTransport,
+				userRepo,
+			)
+
+			repo := mem.NewMemRecordRepo()
+			handler := New(service.New(repo, ""), auth, nil)
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
-				err := repo.Store(context.TODO(), repository.Key(tt.shortCode), repository.Value(tt.want.location))
+				user, _ := auth.Register(context.TODO())
+				record := &model.Record{
+					OriginalURL: model.OriginalURL(tt.want.location),
+					ShortCode:   model.ShortCode(tt.shortCode),
+				}
+				err := repo.Store(context.TODO(), record, user.ID)
 				require.NoError(t, err)
 			}
 
