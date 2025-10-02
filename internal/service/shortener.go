@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/url"
 
+	"github.com/domurdoc/shortener/internal/model"
 	"github.com/domurdoc/shortener/internal/repository"
 )
 
@@ -12,23 +13,27 @@ import (
 const URLMaxLength = 2048
 
 type Shortener struct {
-	repo    repository.Repo
+	repo    repository.RecordRepo
 	baseURL string
 }
 
-func New(repo repository.Repo, baseURL string) *Shortener {
+func New(repo repository.RecordRepo, baseURL string) *Shortener {
 	return &Shortener{repo: repo, baseURL: baseURL}
 }
 
-func (s *Shortener) Shorten(ctx context.Context, longURL string) (string, error) {
-	shortCode, shortURL, err := s.generateShortCodeURL(longURL)
+func (s *Shortener) Shorten(ctx context.Context, user *model.User, originalURL string) (string, error) {
+	shortCode, shortURL, err := s.generateShortCodeURL(originalURL)
 	if err != nil {
 		return "", err
 	}
-	err = s.repo.Store(ctx, repository.Key(shortCode), repository.Value(longURL))
-	var valueErr *repository.ValueAlreadyExistsError
-	if errors.As(err, &valueErr) {
-		shortURL, err = url.JoinPath(s.baseURL, string(valueErr.Key))
+	record := &model.Record{
+		OriginalURL: model.OriginalURL(originalURL),
+		ShortCode:   model.ShortCode(shortCode),
+	}
+	err = s.repo.Store(ctx, record, user.ID)
+	var urlErr *model.OriginalURLExistsError
+	if errors.As(err, &urlErr) {
+		shortURL, err := url.JoinPath(s.baseURL, string(urlErr.ShortCode))
 		if err != nil {
 			return "", err
 		}
@@ -41,39 +46,42 @@ func (s *Shortener) Shorten(ctx context.Context, longURL string) (string, error)
 }
 
 func (s *Shortener) GetByShortCode(ctx context.Context, shortCode string) (string, error) {
-	url, err := s.repo.Fetch(ctx, repository.Key(shortCode))
-	var keyNotFoundError *repository.KeyNotFoundError
-	if errors.As(err, &keyNotFoundError) {
+	record, err := s.repo.Fetch(ctx, model.ShortCode(shortCode))
+	var e *model.ShortCodeNotFoundError
+	if errors.As(err, &e) {
 		return "", &NotFoundError{shortCode: shortCode}
 	}
 	if err != nil {
 		return "", err
 	}
-	return string(url), nil
+	return string(record.OriginalURL), nil
 }
 
-func (s *Shortener) ShortenBatch(ctx context.Context, longURLS []string) ([]string, error) {
-	shortCodes := make([]string, len(longURLS))
-	shortURLS := make([]string, len(longURLS))
-	batchItems := make([]repository.BatchItem, len(longURLS))
-	for i, longURL := range longURLS {
-		shortCode, shortURL, err := s.generateShortCodeURL(longURL)
+func (s *Shortener) ShortenBatch(ctx context.Context, user *model.User, originalURLS []string) ([]string, error) {
+	shortURLS := make([]string, 0, len(originalURLS))
+	records := make([]model.Record, 0, len(originalURLS))
+	for _, originalURL := range originalURLS {
+		shortCode, shortURL, err := s.generateShortCodeURL(originalURL)
 		if err != nil {
 			return nil, err
 		}
-		shortCodes[i] = shortCode
-		shortURLS[i] = shortURL
-		batchItems[i] = repository.BatchItem{Key: repository.Key(shortCode), Value: repository.Value(longURL)}
+		record := model.Record{
+			OriginalURL: model.OriginalURL(originalURL),
+			ShortCode:   model.ShortCode(shortCode),
+		}
+
+		records = append(records, record)
+		shortURLS = append(shortURLS, shortURL)
 	}
-	err := s.repo.StoreBatch(ctx, batchItems)
-	var batchError repository.BatchError
-	if errors.As(err, &batchError) {
-		for _, e := range batchError {
-			shortURL, err := url.JoinPath(s.baseURL, string(e.Key))
+	err := s.repo.StoreBatch(ctx, records, user.ID)
+	var batchErr model.BatchError
+	if errors.As(err, &batchErr) {
+		for _, e := range batchErr {
+			shortURL, err := url.JoinPath(s.baseURL, string(e.ShortCode))
 			if err != nil {
 				return nil, err
 			}
-			shortURLS[e.Pos] = shortURL
+			shortURLS[e.BatchPos] = shortURL
 		}
 		return shortURLS, ErrURLConflict
 	}
@@ -83,10 +91,24 @@ func (s *Shortener) ShortenBatch(ctx context.Context, longURLS []string) ([]stri
 	return shortURLS, nil
 }
 
-func (s *Shortener) HealthCheck(ctx context.Context) error {
-	e := make([]error, 0)
-	e = append(e, s.repo.Ping(ctx))
-	return errors.Join(e...)
+func (s *Shortener) GetForUser(ctx context.Context, user *model.User) ([]model.URLRecord, error) {
+	records, err := s.repo.FetchForUser(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	urlRecords := make([]model.URLRecord, 0, len(records))
+	for _, record := range records {
+		shortURL, err := url.JoinPath(s.baseURL, string(record.ShortCode))
+		if err != nil {
+			return nil, err
+		}
+		urlRecord := model.URLRecord{
+			OriginalURL: record.OriginalURL,
+			ShortURL:    model.ShortURL(shortURL),
+		}
+		urlRecords = append(urlRecords, urlRecord)
+	}
+	return urlRecords, nil
 }
 
 func (s *Shortener) generateShortCodeURL(originalURL string) (string, string, error) {

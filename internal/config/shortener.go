@@ -7,6 +7,10 @@ func LoadOptions() *Options {
 		"info",
 		"",
 		"",
+		"ilovesber",
+		"600s",
+		"ilovesber",
+		"600s",
 	)
 	parseArgs(options)
 	parseEnv(options)

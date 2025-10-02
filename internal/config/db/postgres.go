@@ -3,37 +3,53 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 
-	"github.com/domurdoc/shortener"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/jackc/pgx/v5/stdlib"
+
+	"github.com/domurdoc/shortener/migrations"
 )
 
-func NewPG(dsn string) *sql.DB {
+func NewPG(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return db
+	return db, nil
 }
 
-func MigratePG(pgDB *sql.DB) {
-	d1, err := iofs.New(shortener.FS, "migrations")
+func MigratePG(pgDB *sql.DB) error {
+	d1, err := iofs.New(migrations.FS, ".")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	d2, err := postgres.WithInstance(pgDB, &postgres.Config{})
 	if err != nil {
-		panic(err)
+		return err
 	}
 	m, err := migrate.NewWithInstance("iofs", d1, "postgres", d2)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	err = m.Up()
 	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		panic(err)
+		return err
 	}
+	return nil
+}
+
+func NewPGArger() Arger {
+	return &pgArger{}
+}
+
+type pgArger struct {
+	Pos int
+}
+
+func (a *pgArger) Next() string {
+	a.Pos += 1
+	return fmt.Sprintf("$%d", a.Pos)
 }

@@ -4,8 +4,12 @@ type Options struct {
 	Addr            NetAddress
 	BaseURL         URL
 	LogLevel        LogLevel
-	FileStoragePath FilePath
-	DatabaseDSN     DataSourceName
+	FileStoragePath String
+	DatabaseDSN     String
+	JWTSecret       String
+	JWTDuration     Duration
+	CookieName      String
+	CookieMaxAge    Duration
 }
 
 func New(
@@ -13,7 +17,11 @@ func New(
 	baseURL,
 	logLevel,
 	storagePath,
-	databaseDSN string,
+	databaseDSN,
+	jwtSecret,
+	jwtDuration,
+	cookieName,
+	cookieMaxAge string,
 ) *Options {
 	options := Options{}
 	setOptionFromString(&options.BaseURL, baseURL)
@@ -21,6 +29,10 @@ func New(
 	setOptionFromString(&options.LogLevel, logLevel)
 	setOptionFromString(&options.FileStoragePath, storagePath)
 	setOptionFromString(&options.DatabaseDSN, databaseDSN)
+	setOptionFromString(&options.JWTSecret, jwtSecret)
+	setOptionFromString(&options.JWTDuration, jwtDuration)
+	setOptionFromString(&options.CookieMaxAge, cookieMaxAge)
+	setOptionFromString(&options.CookieName, cookieName)
 	return &options
 }
 

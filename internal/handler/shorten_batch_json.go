@@ -11,18 +11,24 @@ import (
 )
 
 type jsonBatchRequestItem struct {
-	CID         string `json:"correlation_id"`
-	OriginalURL string `json:"original_url"`
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
 }
 
 type jsonBatchResponseItem struct {
-	CID      string `json:"correlation_id"`
-	ShortURL string `json:"short_url"`
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
 }
 
 func (h *Handler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
-	var reqItems []jsonBatchRequestItem
 	ctx := r.Context()
+
+	user, err := h.authenticate(ctx, w, r)
+	if err != nil {
+		return
+	}
+
+	var reqItems []jsonBatchRequestItem
 
 	if !httputil.HasContentType(r.Header, httputil.ContentTypeJSON) {
 		http.Error(w, fmt.Sprintf("wanted Content-Type: %s", httputil.ContentTypeJSON), http.StatusBadRequest)
@@ -41,36 +47,23 @@ func (h *Handler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 	for i, jsonRequest := range reqItems {
 		originalURLS[i] = jsonRequest.OriginalURL
 	}
-
-	shortURLS, err := h.service.ShortenBatch(ctx, originalURLS)
+	shortURLS, err := h.service.ShortenBatch(ctx, user, originalURLS)
 	var urlError *service.URLError
 	if errors.As(err, &urlError) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if errors.Is(err, service.ErrURLConflict) {
-		writeShortURLBatchJSON(w, http.StatusConflict, shortURLS, reqItems)
-		return
-	}
-	if err != nil {
+	if err != nil && !errors.Is(err, service.ErrURLConflict) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeShortURLBatchJSON(w, http.StatusCreated, shortURLS, reqItems)
-}
-
-func writeShortURLBatchJSON(w http.ResponseWriter, status int, shortURLS []string, reqItems []jsonBatchRequestItem) {
 	resItems := make([]jsonBatchResponseItem, len(reqItems))
 	for i, jsonRequest := range reqItems {
-		resItems[i] = jsonBatchResponseItem{CID: jsonRequest.CID, ShortURL: shortURLS[i]}
+		resItems[i] = jsonBatchResponseItem{CorrelationID: jsonRequest.CorrelationID, ShortURL: shortURLS[i]}
 	}
-
-	httputil.SetContentType(w.Header(), httputil.ContentTypeJSON)
-	w.WriteHeader(status)
-
-	enc := json.NewEncoder(w)
-	if err := enc.Encode(resItems); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	status := http.StatusCreated
+	if err != nil {
+		status = http.StatusConflict
 	}
+	h.writeJSONResponse(w, resItems, status)
 }
