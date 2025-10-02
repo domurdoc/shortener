@@ -337,7 +337,6 @@ jobs:
               -binary-path=cmd/shortener/shortener \
               -source-path=. \
               -database-dsn=$DATABASE_CONN_STRING
-          wipedb $DATABASE_CONN_STRING
 
       - name: "Code increment #11"
         if: |
@@ -360,7 +359,6 @@ jobs:
           shortenertest -test.v -test.run=^TestIteration11$ \
               -binary-path=cmd/shortener/shortener \
               -database-dsn=$DATABASE_CONN_STRING
-          wipedb $DATABASE_CONN_STRING
 
       - name: "Code increment #12"
         if: |
@@ -382,7 +380,6 @@ jobs:
           shortenertest -test.v -test.run=^TestIteration12$ \
               -binary-path=cmd/shortener/shortener \
               -database-dsn=$DATABASE_CONN_STRING
-          wipedb $DATABASE_CONN_STRING
 
       - name: "Code increment #13"
         if: |
@@ -403,7 +400,6 @@ jobs:
           shortenertest -test.v -test.run=^TestIteration13$ \
               -binary-path=cmd/shortener/shortener \
               -database-dsn=$DATABASE_CONN_STRING
-          wipedb $DATABASE_CONN_STRING
 
       - name: "Code increment #14"
         if: |
@@ -423,7 +419,6 @@ jobs:
           shortenertest -test.v -test.run=^TestIteration14$ \
               -binary-path=cmd/shortener/shortener \
               -database-dsn=$DATABASE_CONN_STRING
-          wipedb $DATABASE_CONN_STRING
 
       - name: "Code increment #15"
         if: |
