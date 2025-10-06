@@ -58,7 +58,16 @@ func TestShortener_Retrieve(t *testing.T) {
 			)
 
 			repo := mem.NewMemRecordRepo()
-			handler := New(service.New(repo, nil, "", time.Second), auth, nil)
+			service := service.New(
+				"",
+				1,
+				1,
+				time.Second,
+				repo,
+				nil,
+				nil,
+			)
+			handler := New(service, auth)
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
 				user, _ := auth.Register(context.TODO())

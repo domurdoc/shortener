@@ -1,5 +1,7 @@
 package config
 
+import "github.com/domurdoc/shortener/internal/utils"
+
 func LoadOptions() *Options {
 	options := New(
 		":8080",
@@ -7,10 +9,12 @@ func LoadOptions() *Options {
 		"info",
 		"",
 		"",
-		"ilovesber",
+		utils.GenerateRandomString(utils.ALPHA, 32),
 		"600s",
 		"ilovesber",
 		"600s",
+		"10",
+		"10",
 		"5s",
 	)
 	parseArgs(options)

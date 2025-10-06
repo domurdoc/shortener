@@ -239,7 +239,7 @@ func (r *DBRecordRepo) FetchForUser(ctx context.Context, userID model.UserID) ([
 	return records, nil
 }
 
-func (r *DBRecordRepo) Delete(ctx context.Context, records []model.UserRecord) error {
+func (r *DBRecordRepo) Delete(ctx context.Context, records []model.UserRecord) (int, error) {
 	arger := r.newArger()
 
 	values := make([]string, 0, len(records))
@@ -251,6 +251,10 @@ func (r *DBRecordRepo) Delete(ctx context.Context, records []model.UserRecord) e
 	}
 
 	deleteOwnershipQuery := fmt.Sprintf(queryDeleteOwnership, strings.Join(values, ","))
-	_, err := r.db.ExecContext(ctx, deleteOwnershipQuery, args...)
-	return err
+	res, err := r.db.ExecContext(ctx, deleteOwnershipQuery, args...)
+	if err != nil {
+		return 0, err
+	}
+	count, err := res.RowsAffected()
+	return int(count), err
 }

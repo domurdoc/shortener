@@ -76,7 +76,16 @@ func TestShortener_Shorten(t *testing.T) {
 				bearerTransport,
 				userRepo,
 			)
-			handler := New(service.New(mem.NewMemRecordRepo(), nil, tt.baseURL, time.Second), auth, nil)
+			service := service.New(
+				tt.baseURL,
+				1,
+				1,
+				time.Second,
+				mem.NewMemRecordRepo(),
+				nil,
+				nil,
+			)
+			handler := New(service, auth)
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			w := httptest.NewRecorder()

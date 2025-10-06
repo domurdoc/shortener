@@ -95,12 +95,14 @@ func (r *MemRecordRepo) FetchForUser(ctx context.Context, userID model.UserID) (
 	return slices.Collect(maps.Values(originalURLRecords)), nil
 }
 
-func (r *MemRecordRepo) Delete(ctx context.Context, records []model.UserRecord) error {
+func (r *MemRecordRepo) Delete(ctx context.Context, records []model.UserRecord) (int, error) {
+	counter := 0
 	for _, record := range records {
 		userIDS, ok := r.ShortCodeUserIDS[record.ShortCode]
 		if !ok {
 			continue
 		}
+		counter++
 		delete(userIDS, record.UserID)
 		shortCodeRecords, ok := r.UserIDRecords[record.UserID]
 		if !ok {
@@ -108,5 +110,5 @@ func (r *MemRecordRepo) Delete(ctx context.Context, records []model.UserRecord) 
 		}
 		delete(shortCodeRecords, record.ShortCode)
 	}
-	return nil
+	return counter, nil
 }

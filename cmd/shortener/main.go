@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 
 	"github.com/domurdoc/shortener/internal/app"
+	"github.com/domurdoc/shortener/internal/handler"
 	"github.com/domurdoc/shortener/internal/router"
 )
 
@@ -23,5 +25,7 @@ func main() {
 		"databaseDSN", a.Options.DatabaseDSN,
 		"repo", fmt.Sprintf("%T", a.RecordRepo),
 	)
-	log.Fatal(router.Run(a.Service, a.Auth, a.DB, a.Log, a.Options.Addr.String()))
+	handler := handler.New(a.Service, a.Auth)
+	router := router.New(handler, a.Log)
+	log.Fatal(http.ListenAndServe(a.Options.Addr.String(), router))
 }

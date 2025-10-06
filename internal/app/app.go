@@ -26,30 +26,24 @@ type App struct {
 	RecordRepo repository.RecordRepo
 	UserRepo   repository.UserRepo
 	Log        *zap.SugaredLogger
-	Service    *service.Shortener
+	Service    *service.Service
 	DB         *sql.DB
 	Auth       *auth.Auth
 }
 
-func New() (a *App, err error) {
-	a = &App{Options: config.LoadOptions()}
-	defer func() {
-		if err != nil {
-			err = errors.Join(err, a.Close())
-		}
-	}()
-
-	if err = a.initRepo(); err != nil {
-		return nil, err
+func New() (*App, error) {
+	a := &App{Options: config.LoadOptions()}
+	if err := a.initRepo(); err != nil {
+		return nil, errors.Join(err, a.Close())
 	}
-	if err = a.initLog(); err != nil {
-		return nil, err
+	if err := a.initLog(); err != nil {
+		return nil, errors.Join(err, a.Close())
 	}
-	if err = a.initService(); err != nil {
-		return nil, err
+	if err := a.initService(); err != nil {
+		return nil, errors.Join(err, a.Close())
 	}
-	if err = a.initAuth(); err != nil {
-		return nil, err
+	if err := a.initAuth(); err != nil {
+		return nil, errors.Join(err, a.Close())
 	}
 	return a, nil
 }
@@ -109,10 +103,13 @@ func (a *App) initRepo() error {
 
 func (a *App) initService() error {
 	a.Service = service.New(
+		a.Options.BaseURL.String(),
+		int(a.Options.DeleterMaxWorkers),
+		int(a.Options.DeleterMaxBatchSize),
+		time.Duration(a.Options.DeleterCheckInterval),
 		a.RecordRepo,
 		a.Log,
-		a.Options.BaseURL.String(),
-		time.Duration(a.Options.SaveDeletionsInterval),
+		a.DB,
 	)
 	return nil
 }
