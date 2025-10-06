@@ -7,10 +7,11 @@ import (
 )
 
 type RecordRepo interface {
-	Store(context.Context, *model.Record, model.UserID) error
-	Fetch(context.Context, model.ShortCode) (*model.Record, error)
-	FetchForUser(context.Context, model.UserID) ([]model.Record, error)
-	StoreBatch(context.Context, []model.Record, model.UserID) error
+	Store(context.Context, *model.BaseRecord, model.UserID) error
+	Fetch(context.Context, model.ShortCode) (*model.BaseRecord, error)
+	FetchForUser(context.Context, model.UserID) ([]model.BaseRecord, error)
+	StoreBatch(context.Context, []model.BaseRecord, model.UserID) error
+	Delete(context.Context, []model.UserRecord) error
 }
 
 type UserRepo interface {

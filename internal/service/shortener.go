@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"time"
+
+	"go.uber.org/zap"
 
 	"github.com/domurdoc/shortener/internal/model"
 	"github.com/domurdoc/shortener/internal/repository"
@@ -13,12 +16,30 @@ import (
 const URLMaxLength = 2048
 
 type Shortener struct {
-	repo    repository.RecordRepo
-	baseURL string
+	repo         repository.RecordRepo
+	baseURL      string
+	deletions    chan model.UserRecord
+	dumpInterval time.Duration
+	log          *zap.SugaredLogger
+	doneCh       chan struct{}
 }
 
-func New(repo repository.RecordRepo, baseURL string) *Shortener {
-	return &Shortener{repo: repo, baseURL: baseURL}
+func New(
+	repo repository.RecordRepo,
+	log *zap.SugaredLogger,
+	baseURL string,
+	dumpInterval time.Duration,
+) *Shortener {
+	s := &Shortener{
+		repo:         repo,
+		baseURL:      baseURL,
+		dumpInterval: dumpInterval,
+		deletions:    make(chan model.UserRecord),
+		log:          log,
+		doneCh:       make(chan struct{}),
+	}
+	go s.serveDeletions()
+	return s
 }
 
 func (s *Shortener) Shorten(ctx context.Context, user *model.User, originalURL string) (string, error) {
@@ -26,7 +47,7 @@ func (s *Shortener) Shorten(ctx context.Context, user *model.User, originalURL s
 	if err != nil {
 		return "", err
 	}
-	record := &model.Record{
+	record := &model.BaseRecord{
 		OriginalURL: model.OriginalURL(originalURL),
 		ShortCode:   model.ShortCode(shortCode),
 	}
@@ -37,7 +58,7 @@ func (s *Shortener) Shorten(ctx context.Context, user *model.User, originalURL s
 		if err != nil {
 			return "", err
 		}
-		return shortURL, ErrURLConflict
+		return shortURL, urlErr
 	}
 	if err != nil {
 		return "", err
@@ -47,10 +68,6 @@ func (s *Shortener) Shorten(ctx context.Context, user *model.User, originalURL s
 
 func (s *Shortener) GetByShortCode(ctx context.Context, shortCode string) (string, error) {
 	record, err := s.repo.Fetch(ctx, model.ShortCode(shortCode))
-	var e *model.ShortCodeNotFoundError
-	if errors.As(err, &e) {
-		return "", &NotFoundError{shortCode: shortCode}
-	}
 	if err != nil {
 		return "", err
 	}
@@ -59,13 +76,13 @@ func (s *Shortener) GetByShortCode(ctx context.Context, shortCode string) (strin
 
 func (s *Shortener) ShortenBatch(ctx context.Context, user *model.User, originalURLS []string) ([]string, error) {
 	shortURLS := make([]string, 0, len(originalURLS))
-	records := make([]model.Record, 0, len(originalURLS))
+	records := make([]model.BaseRecord, 0, len(originalURLS))
 	for _, originalURL := range originalURLS {
 		shortCode, shortURL, err := s.generateShortCodeURL(originalURL)
 		if err != nil {
 			return nil, err
 		}
-		record := model.Record{
+		record := model.BaseRecord{
 			OriginalURL: model.OriginalURL(originalURL),
 			ShortCode:   model.ShortCode(shortCode),
 		}
@@ -74,16 +91,16 @@ func (s *Shortener) ShortenBatch(ctx context.Context, user *model.User, original
 		shortURLS = append(shortURLS, shortURL)
 	}
 	err := s.repo.StoreBatch(ctx, records, user.ID)
-	var batchErr model.BatchError
-	if errors.As(err, &batchErr) {
-		for _, e := range batchErr {
-			shortURL, err := url.JoinPath(s.baseURL, string(e.ShortCode))
+	var batchURLExistsErr model.BatchOriginalURLExistsError
+	if errors.As(err, &batchURLExistsErr) {
+		for _, urlExistsErr := range batchURLExistsErr {
+			shortURL, err := url.JoinPath(s.baseURL, string(urlExistsErr.ShortCode))
 			if err != nil {
 				return nil, err
 			}
-			shortURLS[e.BatchPos] = shortURL
+			shortURLS[urlExistsErr.BatchPos] = shortURL
 		}
-		return shortURLS, ErrURLConflict
+		return shortURLS, batchURLExistsErr
 	}
 	if err != nil {
 		return nil, err
@@ -111,6 +128,48 @@ func (s *Shortener) GetForUser(ctx context.Context, user *model.User) ([]model.U
 	return urlRecords, nil
 }
 
+func (s *Shortener) DeleteShortCodes(ctx context.Context, user *model.User, shortCodes []string) {
+	for _, shortCode := range shortCodes {
+		s.deletions <- model.UserRecord{UserID: user.ID, ShortCode: model.ShortCode(shortCode)}
+	}
+}
+
+func (s *Shortener) serveDeletions() {
+	ticker := time.NewTicker(s.dumpInterval)
+
+	var deletions []model.UserRecord
+
+	delete := func() {
+		if len(deletions) == 0 {
+			return
+		}
+		if err := s.repo.Delete(context.TODO(), deletions); err != nil {
+			if s.log != nil {
+				s.log.Errorw("failed to delete records", "err", err)
+			}
+			return
+		}
+		deletions = nil
+	}
+
+	for {
+		select {
+		case <-ticker.C:
+			delete()
+		case record := <-s.deletions:
+			deletions = append(deletions, record)
+		case <-s.doneCh:
+			delete()
+			return
+		}
+	}
+}
+
+func (s *Shortener) Close() error {
+	close(s.doneCh)
+	return nil
+}
+
 func (s *Shortener) generateShortCodeURL(originalURL string) (string, string, error) {
 	if err := validateURL(originalURL); err != nil {
 		return "", "", err
@@ -125,17 +184,17 @@ func (s *Shortener) generateShortCodeURL(originalURL string) (string, string, er
 
 func validateURL(URL string) error {
 	if len(URL) > URLMaxLength {
-		return &URLError{msg: "url too long", url: URL}
+		return &model.InvalidURLError{Msg: "url too long", URL: URL}
 	}
 	parsedLongURL, err := url.Parse(URL)
 	if err != nil {
-		return &URLError{msg: err.Error(), url: URL}
+		return &model.InvalidURLError{Msg: err.Error(), URL: URL}
 	}
 	if parsedLongURL.Host == "" {
-		return &URLError{msg: "must be absolute", url: URL}
+		return &model.InvalidURLError{Msg: "must be absolute", URL: URL}
 	}
 	if parsedLongURL.String() != URL {
-		return &URLError{msg: "must be url-encoded", url: URL}
+		return &model.InvalidURLError{Msg: "must be url-encoded", URL: URL}
 	}
 	return nil
 }

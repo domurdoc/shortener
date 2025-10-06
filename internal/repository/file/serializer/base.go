@@ -8,7 +8,7 @@ type Ownership struct {
 }
 
 type Snapshot struct {
-	Records   []model.Record
+	Records   []model.BaseRecord
 	Ownership []Ownership
 }
 

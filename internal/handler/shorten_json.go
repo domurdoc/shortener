@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/domurdoc/shortener/internal/httputil"
-	"github.com/domurdoc/shortener/internal/service"
+	"github.com/domurdoc/shortener/internal/model"
 )
 
 type jsonRequest struct {
@@ -38,12 +38,13 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	shortURL, err := h.service.Shorten(ctx, user, req.URL)
-	var urlError *service.URLError
-	if errors.As(err, &urlError) {
+	var invalidURLErr *model.InvalidURLError
+	if errors.As(err, &invalidURLErr) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err != nil && !errors.Is(err, service.ErrURLConflict) {
+	var urlExistsErr *model.OriginalURLExistsError
+	if err != nil && !errors.As(err, &urlExistsErr) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

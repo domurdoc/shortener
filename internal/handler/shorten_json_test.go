@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,7 +101,7 @@ func TestShortener_ShortenJSON(t *testing.T) {
 				userRepo,
 			)
 
-			handler := New(service.New(mem.NewMemRecordRepo(), "http://localhost:8081"), auth, nil)
+			handler := New(service.New(mem.NewMemRecordRepo(), nil, "http://localhost:8081", time.Second), auth, nil)
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
 			r.Header.Set(httputil.HeaderContentType, tt.contentType)

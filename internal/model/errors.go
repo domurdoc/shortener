@@ -5,12 +5,29 @@ import (
 	"strings"
 )
 
+type InvalidURLError struct {
+	Msg string
+	URL string
+}
+
+func (e InvalidURLError) Error() string {
+	return fmt.Sprintf("Invalid URL %q: %s", e.URL, e.Msg)
+}
+
 type ShortCodeNotFoundError struct {
 	ShortCode ShortCode
 }
 
-func (e *ShortCodeNotFoundError) Error() string {
-	return fmt.Sprintf("Key %q not found", e.ShortCode)
+func (e ShortCodeNotFoundError) Error() string {
+	return fmt.Sprintf("ShortCode %q not found", e.ShortCode)
+}
+
+type ShortCodeDeletedError struct {
+	ShortCode ShortCode
+}
+
+func (e ShortCodeDeletedError) Error() string {
+	return fmt.Sprintf("ShortCode %q deleted", e.ShortCode)
 }
 
 type OriginalURLExistsError struct {
@@ -19,13 +36,13 @@ type OriginalURLExistsError struct {
 	BatchPos    int
 }
 
-func (e *OriginalURLExistsError) Error() string {
+func (e OriginalURLExistsError) Error() string {
 	return fmt.Sprintf("OriginalURL %q already exists with ShortCode %q", e.OriginalURL, e.ShortCode)
 }
 
-type BatchError []*OriginalURLExistsError
+type BatchOriginalURLExistsError []*OriginalURLExistsError
 
-func (e BatchError) Error() string {
+func (e BatchOriginalURLExistsError) Error() string {
 	errorStrings := make([]string, len(e))
 	for _, part := range e {
 		errorStrings = append(errorStrings, part.Error())

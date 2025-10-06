@@ -57,6 +57,8 @@ func New() (a *App, err error) {
 func (a *App) Close() error {
 	var errs []error
 
+	errs = append(errs, a.Service.Close())
+
 	if a.Log != nil {
 		errs = append(errs, a.Log.Sync())
 	}
@@ -106,7 +108,12 @@ func (a *App) initRepo() error {
 }
 
 func (a *App) initService() error {
-	a.Service = service.New(a.RecordRepo, a.Options.BaseURL.String())
+	a.Service = service.New(
+		a.RecordRepo,
+		a.Log,
+		a.Options.BaseURL.String(),
+		time.Duration(a.Options.SaveDeletionsInterval),
+	)
 	return nil
 }
 

@@ -1,15 +1,16 @@
 package config
 
 type Options struct {
-	Addr            NetAddress
-	BaseURL         URL
-	LogLevel        LogLevel
-	FileStoragePath String
-	DatabaseDSN     String
-	JWTSecret       String
-	JWTDuration     Duration
-	CookieName      String
-	CookieMaxAge    Duration
+	Addr                  NetAddress
+	BaseURL               URL
+	LogLevel              LogLevel
+	FileStoragePath       String
+	DatabaseDSN           String
+	JWTSecret             String
+	JWTDuration           Duration
+	CookieName            String
+	CookieMaxAge          Duration
+	SaveDeletionsInterval Duration
 }
 
 func New(
@@ -21,7 +22,8 @@ func New(
 	jwtSecret,
 	jwtDuration,
 	cookieName,
-	cookieMaxAge string,
+	cookieMaxAge,
+	saveDeletionsInterval string,
 ) *Options {
 	options := Options{}
 	setOptionFromString(&options.BaseURL, baseURL)
@@ -33,6 +35,7 @@ func New(
 	setOptionFromString(&options.JWTDuration, jwtDuration)
 	setOptionFromString(&options.CookieMaxAge, cookieMaxAge)
 	setOptionFromString(&options.CookieName, cookieName)
+	setOptionFromString(&options.SaveDeletionsInterval, saveDeletionsInterval)
 	return &options
 }
 
