@@ -101,7 +101,16 @@ func TestShortener_ShortenJSON(t *testing.T) {
 				userRepo,
 			)
 
-			handler := New(service.New(mem.NewMemRecordRepo(), nil, "http://localhost:8081", time.Second), auth, nil)
+			service := service.New(
+				"http://localhost:8081",
+				1,
+				1,
+				time.Second,
+				mem.NewMemRecordRepo(),
+				nil,
+				nil,
+			)
+			handler := New(service, auth)
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
 			r.Header.Set(httputil.HeaderContentType, tt.contentType)

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -14,13 +13,12 @@ import (
 )
 
 type Handler struct {
-	service *service.Shortener
+	service *service.Service
 	auth    *auth.Auth
-	db      *sql.DB
 }
 
-func New(shortenerService *service.Shortener, auth *auth.Auth, db *sql.DB) *Handler {
-	return &Handler{service: shortenerService, auth: auth, db: db}
+func New(service *service.Service, auth *auth.Auth) *Handler {
+	return &Handler{service: service, auth: auth}
 }
 
 func (h *Handler) authenticate(ctx context.Context, w http.ResponseWriter, r *http.Request) (*model.User, error) {

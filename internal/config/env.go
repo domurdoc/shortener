@@ -10,7 +10,9 @@ func parseEnv(options *Options) {
 	setOptionFromEnv(&options.JWTSecret, "JWT_SECRET")
 	setOptionFromEnv(&options.JWTDuration, "JWT_DURATION")
 	setOptionFromEnv(&options.CookieMaxAge, "COOKIE_MAX_AGE")
-	setOptionFromEnv(&options.SaveDeletionsInterval, "SAVE_DELETIONS_INTERVAL")
+	setOptionFromEnv(&options.DeleterMaxWorkers, "DELETER_MAX_WORKERS")
+	setOptionFromEnv(&options.DeleterMaxBatchSize, "DELETER_MAX_BATCH_SIZE")
+	setOptionFromEnv(&options.DeleterCheckInterval, "DELETER_CHECK_INTERVAL")
 }
 
 func setOptionFromEnv(s option, envName string) {

@@ -87,22 +87,22 @@ func (r *FileRepo) FetchForUser(ctx context.Context, userID model.UserID) ([]mod
 	return memRepo.FetchForUser(ctx, userID)
 }
 
-func (r *FileRepo) Delete(ctx context.Context, records []model.UserRecord) error {
+func (r *FileRepo) Delete(ctx context.Context, records []model.UserRecord) (int, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	memRepo, err := r.loadMemRepo(ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	err = memRepo.Delete(ctx, records)
+	count, err := memRepo.Delete(ctx, records)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	dumpErr := r.dumpMemRepo(memRepo)
 	if dumpErr != nil {
-		return dumpErr
+		return 0, dumpErr
 	}
-	return err
+	return count, err
 }
 
 func (r *FileRepo) loadMemRepo(_ context.Context) (*mem.MemRecordRepo, error) {

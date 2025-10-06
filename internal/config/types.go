@@ -99,3 +99,18 @@ func (d *Duration) Set(value string) error {
 func (d Duration) String() string {
 	return time.Duration(d).String()
 }
+
+type Integer int
+
+func (i *Integer) Set(value string) error {
+	n, err := strconv.Atoi(value)
+	if err != nil {
+		return err
+	}
+	*i = Integer(n)
+	return nil
+}
+
+func (i Integer) String() string {
+	return strconv.Itoa(int(i))
+}

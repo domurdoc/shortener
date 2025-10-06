@@ -11,7 +11,7 @@ type RecordRepo interface {
 	Fetch(context.Context, model.ShortCode) (*model.BaseRecord, error)
 	FetchForUser(context.Context, model.UserID) ([]model.BaseRecord, error)
 	StoreBatch(context.Context, []model.BaseRecord, model.UserID) error
-	Delete(context.Context, []model.UserRecord) error
+	Delete(context.Context, []model.UserRecord) (int, error)
 }
 
 type UserRepo interface {
