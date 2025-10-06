@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,11 +58,11 @@ func TestShortener_Retrieve(t *testing.T) {
 			)
 
 			repo := mem.NewMemRecordRepo()
-			handler := New(service.New(repo, ""), auth, nil)
+			handler := New(service.New(repo, nil, "", time.Second), auth, nil)
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
 				user, _ := auth.Register(context.TODO())
-				record := &model.Record{
+				record := &model.BaseRecord{
 					OriginalURL: model.OriginalURL(tt.want.location),
 					ShortCode:   model.ShortCode(tt.shortCode),
 				}

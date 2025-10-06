@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/domurdoc/shortener/internal/config/db"
 	"github.com/domurdoc/shortener/internal/model"
@@ -30,15 +31,33 @@ INSERT INTO ownership (user_id, record_id) VALUES (%s, %s)
 ON CONFLICT (user_id, record_id) DO NOTHING
 `
 	queryFetchRecord = `
-SELECT value FROM records WHERE key = %s
+SELECT value, NOT EXISTS(SELECT 1 FROM ownership o WHERE o.record_id = r.id) AS is_deleted FROM records r WHERE key = %s
 `
 	queryFetchForUser = `
 SELECT key, value FROM records r JOIN ownership o ON r.id = o.record_id
 WHERE o.user_id = %s
 `
+	queryDeleteOwnership = `
+DELETE FROM
+	ownership
+WHERE
+	(user_id, record_id) IN (
+		SELECT
+			o.user_id,
+			o.record_id
+		FROM
+			ownership o
+		JOIN
+			records r
+		ON
+			r.id = o.record_id
+		WHERE
+			(o.user_id, r.key) IN (%s)
+	)
+`
 )
 
-func (r *DBRecordRepo) Store(ctx context.Context, record *model.Record, userID model.UserID) error {
+func (r *DBRecordRepo) Store(ctx context.Context, record *model.BaseRecord, userID model.UserID) error {
 	var arger db.Arger
 
 	arger = r.newArger()
@@ -94,7 +113,7 @@ func (r *DBRecordRepo) Store(ctx context.Context, record *model.Record, userID m
 	return nil
 }
 
-func (r *DBRecordRepo) StoreBatch(ctx context.Context, records []model.Record, userID model.UserID) error {
+func (r *DBRecordRepo) StoreBatch(ctx context.Context, records []model.BaseRecord, userID model.UserID) error {
 	var arger db.Arger
 
 	arger = r.newArger()
@@ -120,7 +139,7 @@ func (r *DBRecordRepo) StoreBatch(ctx context.Context, records []model.Record, u
 	}
 	defer insertOwnershipStmt.Close()
 
-	var batchError model.BatchError
+	var batchError model.BatchOriginalURLExistsError
 	for pos, record := range records {
 		row := insertRecordStmt.QueryRowContext(
 			ctx,
@@ -163,8 +182,9 @@ func (r *DBRecordRepo) StoreBatch(ctx context.Context, records []model.Record, u
 	return nil
 }
 
-func (r *DBRecordRepo) Fetch(ctx context.Context, shortCode model.ShortCode) (*model.Record, error) {
-	record := model.Record{ShortCode: shortCode}
+func (r *DBRecordRepo) Fetch(ctx context.Context, shortCode model.ShortCode) (*model.BaseRecord, error) {
+	record := model.BaseRecord{ShortCode: shortCode}
+	var isDeleted bool
 
 	arger := r.newArger()
 	query := fmt.Sprintf(queryFetchRecord, arger.Next())
@@ -174,18 +194,25 @@ func (r *DBRecordRepo) Fetch(ctx context.Context, shortCode model.ShortCode) (*m
 		query,
 		shortCode,
 	)
-	err := row.Scan(&record.OriginalURL)
+
+	err := row.Scan(
+		&record.OriginalURL,
+		&isDeleted,
+	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, &model.ShortCodeNotFoundError{ShortCode: shortCode}
 	}
 	if err != nil {
 		return nil, err
 	}
+	if isDeleted {
+		return nil, &model.ShortCodeDeletedError{ShortCode: shortCode}
+	}
 	return &record, nil
 }
 
-func (r *DBRecordRepo) FetchForUser(ctx context.Context, userID model.UserID) ([]model.Record, error) {
-	var records []model.Record
+func (r *DBRecordRepo) FetchForUser(ctx context.Context, userID model.UserID) ([]model.BaseRecord, error) {
+	var records []model.BaseRecord
 
 	arger := r.newArger()
 	fetchForUserQuery := fmt.Sprintf(queryFetchForUser, arger.Next())
@@ -197,7 +224,7 @@ func (r *DBRecordRepo) FetchForUser(ctx context.Context, userID model.UserID) ([
 	defer rows.Close()
 
 	for rows.Next() {
-		record := model.Record{}
+		record := model.BaseRecord{}
 		if err := rows.Scan(
 			&record.ShortCode,
 			&record.OriginalURL,
@@ -210,4 +237,20 @@ func (r *DBRecordRepo) FetchForUser(ctx context.Context, userID model.UserID) ([
 		return records, err
 	}
 	return records, nil
+}
+
+func (r *DBRecordRepo) Delete(ctx context.Context, records []model.UserRecord) error {
+	arger := r.newArger()
+
+	values := make([]string, 0, len(records))
+	args := make([]any, 0, len(records))
+
+	for _, record := range records {
+		values = append(values, fmt.Sprintf("(%s, %s)", arger.Next(), arger.Next()))
+		args = append(args, record.UserID, record.ShortCode)
+	}
+
+	deleteOwnershipQuery := fmt.Sprintf(queryDeleteOwnership, strings.Join(values, ","))
+	_, err := r.db.ExecContext(ctx, deleteOwnershipQuery, args...)
+	return err
 }

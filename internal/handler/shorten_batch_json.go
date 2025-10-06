@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/domurdoc/shortener/internal/httputil"
-	"github.com/domurdoc/shortener/internal/service"
+	"github.com/domurdoc/shortener/internal/model"
 )
 
 type jsonBatchRequestItem struct {
@@ -48,12 +48,13 @@ func (h *Handler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 		originalURLS[i] = jsonRequest.OriginalURL
 	}
 	shortURLS, err := h.service.ShortenBatch(ctx, user, originalURLS)
-	var urlError *service.URLError
-	if errors.As(err, &urlError) {
+	var invalidURLErr *model.InvalidURLError
+	if errors.As(err, &invalidURLErr) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err != nil && !errors.Is(err, service.ErrURLConflict) {
+	var urlExistsErr model.BatchOriginalURLExistsError
+	if err != nil && !errors.As(err, &urlExistsErr) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

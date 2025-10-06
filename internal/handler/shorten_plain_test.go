@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,7 +76,7 @@ func TestShortener_Shorten(t *testing.T) {
 				bearerTransport,
 				userRepo,
 			)
-			handler := New(service.New(mem.NewMemRecordRepo(), tt.baseURL), auth, nil)
+			handler := New(service.New(mem.NewMemRecordRepo(), nil, tt.baseURL, time.Second), auth, nil)
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			w := httptest.NewRecorder()

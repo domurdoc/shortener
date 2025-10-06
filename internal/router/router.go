@@ -34,6 +34,7 @@ func setupRoutes(router *chi.Mux, handler *handler.Handler) {
 	router.Post("/api/shorten", handler.ShortenJSON)
 	router.Post("/api/shorten/batch", handler.ShortenBatchJSON)
 	router.Get("/api/user/urls", handler.RetrieveForUser)
+	router.Delete("/api/user/urls", handler.DeleteShortCodes)
 }
 
 func setupMiddleware(router *chi.Mux, log *zap.SugaredLogger) http.Handler {

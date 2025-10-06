@@ -29,7 +29,7 @@ func New(filepath string, serializer serializer.Serializer) (*FileRepo, error) {
 	return &repo, nil
 }
 
-func (r *FileRepo) Store(ctx context.Context, record *model.Record, userID model.UserID) error {
+func (r *FileRepo) Store(ctx context.Context, record *model.BaseRecord, userID model.UserID) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	memRepo, err := r.loadMemRepo(ctx)
@@ -48,7 +48,7 @@ func (r *FileRepo) Store(ctx context.Context, record *model.Record, userID model
 	return err
 }
 
-func (r *FileRepo) StoreBatch(ctx context.Context, records []model.Record, userID model.UserID) error {
+func (r *FileRepo) StoreBatch(ctx context.Context, records []model.BaseRecord, userID model.UserID) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	memRepo, err := r.loadMemRepo(ctx)
@@ -56,8 +56,8 @@ func (r *FileRepo) StoreBatch(ctx context.Context, records []model.Record, userI
 		return err
 	}
 	err = memRepo.StoreBatch(ctx, records, userID)
-	var batchErr model.BatchError
-	if err != nil && !errors.As(err, &batchErr) {
+	var batchURLExistsErr model.BatchOriginalURLExistsError
+	if err != nil && !errors.As(err, &batchURLExistsErr) {
 		return err
 	}
 	dumpErr := r.dumpMemRepo(memRepo)
@@ -67,7 +67,7 @@ func (r *FileRepo) StoreBatch(ctx context.Context, records []model.Record, userI
 	return err
 }
 
-func (r *FileRepo) Fetch(ctx context.Context, shortCode model.ShortCode) (*model.Record, error) {
+func (r *FileRepo) Fetch(ctx context.Context, shortCode model.ShortCode) (*model.BaseRecord, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	memRepo, err := r.loadMemRepo(ctx)
@@ -77,7 +77,7 @@ func (r *FileRepo) Fetch(ctx context.Context, shortCode model.ShortCode) (*model
 	return memRepo.Fetch(ctx, shortCode)
 }
 
-func (r *FileRepo) FetchForUser(ctx context.Context, userID model.UserID) ([]model.Record, error) {
+func (r *FileRepo) FetchForUser(ctx context.Context, userID model.UserID) ([]model.BaseRecord, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	memRepo, err := r.loadMemRepo(ctx)
@@ -85,6 +85,24 @@ func (r *FileRepo) FetchForUser(ctx context.Context, userID model.UserID) ([]mod
 		return nil, err
 	}
 	return memRepo.FetchForUser(ctx, userID)
+}
+
+func (r *FileRepo) Delete(ctx context.Context, records []model.UserRecord) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	memRepo, err := r.loadMemRepo(ctx)
+	if err != nil {
+		return err
+	}
+	err = memRepo.Delete(ctx, records)
+	if err != nil {
+		return err
+	}
+	dumpErr := r.dumpMemRepo(memRepo)
+	if dumpErr != nil {
+		return dumpErr
+	}
+	return err
 }
 
 func (r *FileRepo) loadMemRepo(_ context.Context) (*mem.MemRecordRepo, error) {
@@ -107,26 +125,30 @@ func (r *FileRepo) loadMemRepo(_ context.Context) (*mem.MemRecordRepo, error) {
 		return memRepo, nil
 	}
 
-	shortCodeRecords := make(map[model.ShortCode]model.Record)
-	originalURLRecords := make(map[model.OriginalURL]model.Record)
+	shortCodeRecords := make(map[model.ShortCode]model.BaseRecord)
+	originalURLRecords := make(map[model.OriginalURL]model.BaseRecord)
+	shortCodeUserIDS := make(map[model.ShortCode]map[model.UserID]model.BaseRecord)
 	for _, record := range snapshot.Records {
 		shortCodeRecords[record.ShortCode] = record
 		originalURLRecords[record.OriginalURL] = record
+		shortCodeUserIDS[record.ShortCode] = make(map[model.UserID]model.BaseRecord)
 	}
-	userIDRecords := make(map[model.UserID]map[model.ShortCode]model.Record)
+	userIDRecords := make(map[model.UserID]map[model.ShortCode]model.BaseRecord)
 	for _, ownership := range snapshot.Ownership {
 		record, ok := shortCodeRecords[ownership.ShortCode]
 		if !ok {
 			return nil, fmt.Errorf("no matching ShortCode")
 		}
 		if _, ok = userIDRecords[ownership.UserID]; !ok {
-			userIDRecords[ownership.UserID] = make(map[model.ShortCode]model.Record)
+			userIDRecords[ownership.UserID] = make(map[model.ShortCode]model.BaseRecord)
 		}
 		userIDRecords[ownership.UserID][record.ShortCode] = record
+		shortCodeUserIDS[ownership.ShortCode][ownership.UserID] = record
 	}
 	memRepo.ShortCodeRecords = shortCodeRecords
 	memRepo.UserIDRecords = userIDRecords
 	memRepo.OriginalURLRecords = originalURLRecords
+	memRepo.ShortCodeUserIDS = shortCodeUserIDS
 
 	return memRepo, nil
 }

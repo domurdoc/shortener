@@ -21,15 +21,15 @@ type jsonSnapshot struct {
 	Ownership []jsonOwnership `json:"ownership"`
 }
 
-func toJSONRecord(r model.Record) jsonRecord {
+func toJSONRecord(r model.BaseRecord) jsonRecord {
 	return jsonRecord{
 		ShortURL:    r.ShortCode,
 		OriginalURL: r.OriginalURL,
 	}
 }
 
-func fromJSONRecord(jr jsonRecord) model.Record {
-	return model.Record{
+func fromJSONRecord(jr jsonRecord) model.BaseRecord {
+	return model.BaseRecord{
 		ShortCode:   jr.ShortURL,
 		OriginalURL: jr.OriginalURL,
 	}
@@ -55,7 +55,7 @@ func toJSONSnapshot(r *Snapshot) jsonSnapshot {
 }
 
 func fromJSONSnapshot(js *jsonSnapshot) *Snapshot {
-	records := make([]model.Record, 0, len(js.Records))
+	records := make([]model.BaseRecord, 0, len(js.Records))
 	for _, jr := range js.Records {
 		r := fromJSONRecord(jr)
 		records = append(records, r)

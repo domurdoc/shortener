@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/domurdoc/shortener/internal/httputil"
+	"github.com/domurdoc/shortener/internal/model"
 	"github.com/domurdoc/shortener/internal/service"
 )
 
@@ -25,12 +26,13 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	}
 	longURL := string(buf[:n])
 	shortURL, err := h.service.Shorten(ctx, user, longURL)
-	var urlError *service.URLError
-	if errors.As(err, &urlError) {
+	var invalidURLErr *model.InvalidURLError
+	if errors.As(err, &invalidURLErr) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err != nil && !errors.Is(err, service.ErrURLConflict) {
+	var urlExistsErr *model.OriginalURLExistsError
+	if err != nil && !errors.As(err, &urlExistsErr) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
