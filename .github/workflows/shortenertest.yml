@@ -437,7 +437,6 @@ jobs:
           shortenertest -test.v -test.run=^TestIteration15$ \
               -binary-path=cmd/shortener/shortener \
               -database-dsn=$DATABASE_CONN_STRING
-          wipedb $DATABASE_CONN_STRING
 
       - name: "Code increment #16"
         if: |
