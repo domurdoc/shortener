@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 
+	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/model"
 )
 
@@ -12,14 +13,9 @@ type jsonURLRecord struct {
 }
 
 func (h *Handler) RetrieveForUser(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	user := auth.GetUser(r)
 
-	user, err := h.authenticate(ctx, w, r)
-	if err != nil {
-		return
-	}
-
-	urlRecords, err := h.service.GetForUser(ctx, user)
+	urlRecords, err := h.service.GetForUser(r.Context(), user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

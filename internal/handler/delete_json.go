@@ -5,17 +5,15 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/httputil"
 )
 
 func (h *Handler) DeleteShortCodes(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	user, err := h.authenticate(ctx, w, r)
-	if err != nil {
-		return
-	}
 	var shortCodes []string
+
+	user := auth.GetUser(r)
+
 	if !httputil.HasContentType(r.Header, httputil.ContentTypeJSON) {
 		http.Error(w, fmt.Sprintf("wanted Content-Type: %s", httputil.ContentTypeJSON), http.StatusBadRequest)
 		return
@@ -25,7 +23,7 @@ func (h *Handler) DeleteShortCodes(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	go h.service.DeleteShortCodes(ctx, user, shortCodes)
+	go h.service.DeleteShortCodes(r.Context(), user, shortCodes)
 	httputil.SetContentType(w.Header(), httputil.ContentTypeJSON)
 	w.WriteHeader(http.StatusAccepted)
 }

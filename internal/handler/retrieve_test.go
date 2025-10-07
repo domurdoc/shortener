@@ -51,7 +51,7 @@ func TestShortener_Retrieve(t *testing.T) {
 			bearerTransport := transport.NewBearer("Authorization")
 			userRepo := mem.NewMemUserRepo()
 
-			auth := auth.New(
+			a := auth.New(
 				debugStrategy,
 				bearerTransport,
 				userRepo,
@@ -67,10 +67,10 @@ func TestShortener_Retrieve(t *testing.T) {
 				nil,
 				nil,
 			)
-			handler := New(service, auth)
+			handler := New(service)
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
-				user, _ := auth.Register(context.TODO())
+				user, _ := a.Register(context.TODO())
 				record := &model.BaseRecord{
 					OriginalURL: model.OriginalURL(tt.want.location),
 					ShortCode:   model.ShortCode(tt.shortCode),

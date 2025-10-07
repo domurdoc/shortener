@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -95,12 +96,11 @@ func TestShortener_ShortenJSON(t *testing.T) {
 			bearerTransport := transport.NewBearer("Authorization")
 			userRepo := mem.NewMemUserRepo()
 
-			auth := auth.New(
+			a := auth.New(
 				debugStrategy,
 				bearerTransport,
 				userRepo,
 			)
-
 			service := service.New(
 				"http://localhost:8081",
 				1,
@@ -110,12 +110,16 @@ func TestShortener_ShortenJSON(t *testing.T) {
 				nil,
 				nil,
 			)
-			handler := New(service, auth)
+			handler := New(service)
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
 			r.Header.Set(httputil.HeaderContentType, tt.contentType)
 			w := httptest.NewRecorder()
-			handler.ShortenJSON(w, r)
+
+			user, err := a.AuthenticateOrRegisterAndLogin(context.TODO(), w, r)
+			assert.NoError(t, err)
+
+			handler.ShortenJSON(w, auth.AttachUser(r, user))
 
 			resp := w.Result()
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)

@@ -5,18 +5,14 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/httputil"
 	"github.com/domurdoc/shortener/internal/model"
 	"github.com/domurdoc/shortener/internal/service"
 )
 
 func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	user, err := h.authenticate(ctx, w, r)
-	if err != nil {
-		return
-	}
+	user := auth.GetUser(r)
 
 	buf := make([]byte, service.URLMaxLength)
 	n, err := r.Body.Read(buf)
@@ -25,7 +21,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	longURL := string(buf[:n])
-	shortURL, err := h.service.Shorten(ctx, user, longURL)
+	shortURL, err := h.service.Shorten(r.Context(), user, longURL)
 	var invalidURLErr *model.InvalidURLError
 	if errors.As(err, &invalidURLErr) {
 		http.Error(w, err.Error(), http.StatusBadRequest)

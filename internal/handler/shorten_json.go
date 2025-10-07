@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/httputil"
 	"github.com/domurdoc/shortener/internal/model"
 )
@@ -19,14 +20,9 @@ type jsonResponse struct {
 }
 
 func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	user, err := h.authenticate(ctx, w, r)
-	if err != nil {
-		return
-	}
-
 	var req jsonRequest
+
+	user := auth.GetUser(r)
 
 	if !httputil.HasContentType(r.Header, httputil.ContentTypeJSON) {
 		http.Error(w, fmt.Sprintf("wanted Content-Type: %s", httputil.ContentTypeJSON), http.StatusBadRequest)
@@ -37,7 +33,7 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	shortURL, err := h.service.Shorten(ctx, user, req.URL)
+	shortURL, err := h.service.Shorten(r.Context(), user, req.URL)
 	var invalidURLErr *model.InvalidURLError
 	if errors.As(err, &invalidURLErr) {
 		http.Error(w, err.Error(), http.StatusBadRequest)

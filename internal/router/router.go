@@ -4,18 +4,14 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 
-	"github.com/domurdoc/shortener/internal/compressor"
 	"github.com/domurdoc/shortener/internal/handler"
-	"github.com/domurdoc/shortener/internal/httputil"
-	"github.com/domurdoc/shortener/internal/logger"
 )
 
-func New(handler *handler.Handler, log *zap.SugaredLogger) http.Handler {
+func New(handler *handler.Handler) http.Handler {
 	router := chi.NewRouter()
 	setupRoutes(router, handler)
-	return setupMiddleware(router, log)
+	return router
 }
 
 func setupRoutes(router *chi.Mux, handler *handler.Handler) {
@@ -26,12 +22,4 @@ func setupRoutes(router *chi.Mux, handler *handler.Handler) {
 	router.Post("/api/shorten/batch", handler.ShortenBatchJSON)
 	router.Get("/api/user/urls", handler.RetrieveForUser)
 	router.Delete("/api/user/urls", handler.DeleteShortCodes)
-}
-
-func setupMiddleware(router *chi.Mux, log *zap.SugaredLogger) http.Handler {
-	return httputil.AddMiddlewares(
-		router,
-		logger.NewRequestLogger(log),
-		compressor.GZIPMiddleware,
-	)
 }

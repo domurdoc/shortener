@@ -51,8 +51,9 @@ func New() (*App, error) {
 func (a *App) Close() error {
 	var errs []error
 
-	errs = append(errs, a.Service.Close())
-
+	if a.Service != nil {
+		errs = append(errs, a.Service.Close())
+	}
 	if a.Log != nil {
 		errs = append(errs, a.Log.Sync())
 	}

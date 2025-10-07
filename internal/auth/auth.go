@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/domurdoc/shortener/internal/auth/strategy"
@@ -46,4 +47,23 @@ func (a *Auth) Login(ctx context.Context, w http.ResponseWriter, user *model.Use
 
 func (a *Auth) Register(ctx context.Context) (*model.User, error) {
 	return a.repo.CreateUser(ctx)
+}
+
+func (a *Auth) AuthenticateOrRegisterAndLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) (*model.User, error) {
+	user, err := a.Authenticate(ctx, r)
+	if err != nil {
+		var noTokenErr *NoTokenError
+		if errors.As(err, &noTokenErr) {
+			user, err = a.Register(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if err = a.Login(ctx, w, user); err != nil {
+				return nil, err
+			}
+			return user, nil
+		}
+		return nil, err
+	}
+	return user, nil
 }
