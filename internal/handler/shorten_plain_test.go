@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -71,7 +72,7 @@ func TestShortener_Shorten(t *testing.T) {
 			bearerTransport := transport.NewBearer("Authorization")
 			userRepo := mem.NewMemUserRepo()
 
-			auth := auth.New(
+			a := auth.New(
 				debugStrategy,
 				bearerTransport,
 				userRepo,
@@ -85,11 +86,15 @@ func TestShortener_Shorten(t *testing.T) {
 				nil,
 				nil,
 			)
-			handler := New(service, auth)
+			handler := New(service)
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			w := httptest.NewRecorder()
-			handler.Shorten(w, r)
+
+			user, err := a.AuthenticateOrRegisterAndLogin(context.TODO(), w, r)
+			assert.NoError(t, err)
+
+			handler.Shorten(w, auth.AttachUser(r, user))
 
 			resp := w.Result()
 			assert.Equal(t, tt.want.statusCode, resp.StatusCode)

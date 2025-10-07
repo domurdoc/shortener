@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/httputil"
 	"github.com/domurdoc/shortener/internal/model"
 )
@@ -21,14 +22,9 @@ type jsonBatchResponseItem struct {
 }
 
 func (h *Handler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	user, err := h.authenticate(ctx, w, r)
-	if err != nil {
-		return
-	}
-
 	var reqItems []jsonBatchRequestItem
+
+	user := auth.GetUser(r)
 
 	if !httputil.HasContentType(r.Header, httputil.ContentTypeJSON) {
 		http.Error(w, fmt.Sprintf("wanted Content-Type: %s", httputil.ContentTypeJSON), http.StatusBadRequest)
@@ -47,7 +43,7 @@ func (h *Handler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 	for i, jsonRequest := range reqItems {
 		originalURLS[i] = jsonRequest.OriginalURL
 	}
-	shortURLS, err := h.service.ShortenBatch(ctx, user, originalURLS)
+	shortURLS, err := h.service.ShortenBatch(r.Context(), user, originalURLS)
 	var invalidURLErr *model.InvalidURLError
 	if errors.As(err, &invalidURLErr) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
