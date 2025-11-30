@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/domurdoc/shortener/internal/audit"
 	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/auth/strategy"
 	"github.com/domurdoc/shortener/internal/auth/transport"
@@ -110,7 +111,8 @@ func TestShortener_ShortenJSON(t *testing.T) {
 				nil,
 				nil,
 			)
-			handler := New(service)
+			audit := audit.New()
+			handler := New(service, audit)
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
 			r.Header.Set(httputil.HeaderContentType, tt.contentType)

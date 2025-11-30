@@ -10,6 +10,7 @@ import (
 func (h *Handler) Retrieve(w http.ResponseWriter, r *http.Request) {
 	shortCode := r.PathValue("shortCode")
 	longURL, err := h.service.GetByShortCode(r.Context(), shortCode)
+	h.audit.Followed(model.UserID(0), longURL)
 	var notFoundErr *model.ShortCodeNotFoundError
 	if errors.As(err, &notFoundErr) {
 		http.Error(w, err.Error(), http.StatusNotFound)

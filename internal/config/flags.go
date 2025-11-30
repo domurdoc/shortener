@@ -11,5 +11,7 @@ func parseArgs(options *Options) {
 	flag.Var(&options.DeleterMaxWorkers, "w", "deleter max workers")
 	flag.Var(&options.DeleterMaxBatchSize, "s", "deleter max batch size")
 	flag.Var(&options.DeleterCheckInterval, "c", "deleter check interval")
+	flag.Var(&options.AuditFile, "audit-file", "audit file")
+	flag.Var(&options.AuditURL, "audit-url", "audit url")
 	flag.Parse()
 }

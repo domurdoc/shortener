@@ -7,6 +7,8 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/domurdoc/shortener/internal/audit"
+	"github.com/domurdoc/shortener/internal/audit/subscribers"
 	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/auth/strategy"
 	"github.com/domurdoc/shortener/internal/auth/transport"
@@ -22,13 +24,16 @@ import (
 )
 
 type App struct {
-	Options    *config.Options
-	RecordRepo repository.RecordRepo
-	UserRepo   repository.UserRepo
-	Log        *zap.SugaredLogger
-	Service    *service.Service
-	DB         *sql.DB
-	Auth       *auth.Auth
+	Options        *config.Options
+	RecordRepo     repository.RecordRepo
+	UserRepo       repository.UserRepo
+	Log            *zap.SugaredLogger
+	Service        *service.Service
+	DB             *sql.DB
+	Auth           *auth.Auth
+	Audit          *audit.Audit
+	AuditFileSub   *subscribers.FileSubscriber
+	AuditRemoteSub *subscribers.RemoteSubscriber
 }
 
 func New() (*App, error) {
@@ -45,12 +50,21 @@ func New() (*App, error) {
 	if err := a.initAuth(); err != nil {
 		return nil, errors.Join(err, a.Close())
 	}
+	if err := a.initAudit(); err != nil {
+		return nil, errors.Join(err, a.Close())
+	}
 	return a, nil
 }
 
 func (a *App) Close() error {
 	var errs []error
 
+	if a.AuditFileSub != nil {
+		errs = append(errs, a.AuditFileSub.Close())
+	}
+	if a.AuditRemoteSub != nil {
+		errs = append(errs, a.AuditRemoteSub.Close())
+	}
 	if a.Service != nil {
 		errs = append(errs, a.Service.Close())
 	}
@@ -126,5 +140,29 @@ func (a *App) initAuth() error {
 		false,
 	)
 	a.Auth = auth.New(strategy, transport, a.UserRepo)
+	return nil
+}
+
+func (a *App) initAudit() error {
+	a.Audit = audit.New()
+
+	if a.Options.AuditFile != "" {
+		a.AuditFileSub = subscribers.NewFile(
+			a.Options.AuditFile.String(),
+			int(a.Options.AuditFilePoolSize),
+			int(a.Options.AuditFileMaxBatchSize),
+			time.Duration(a.Options.AuditFileBatchInterval),
+			a.Log,
+		)
+		a.Audit.Register(a.AuditFileSub)
+	}
+	if a.Options.AuditURL.String() != "" {
+		a.AuditRemoteSub = subscribers.NewRemote(
+			a.Options.AuditURL.String(),
+			a.Log,
+			int(a.Options.AuditRemotePoolSize),
+		)
+		a.Audit.Register(a.AuditRemoteSub)
+	}
 	return nil
 }

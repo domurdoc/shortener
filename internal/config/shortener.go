@@ -16,6 +16,12 @@ func LoadOptions() *Options {
 		"10",
 		"10",
 		"5s",
+		"",
+		"1",
+		"0",
+		"2s",
+		"",
+		"1",
 	)
 	parseArgs(options)
 	parseEnv(options)
