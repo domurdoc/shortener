@@ -28,8 +28,10 @@ func main() {
 		"fileStoragePath", a.Options.FileStoragePath,
 		"databaseDSN", a.Options.DatabaseDSN,
 		"repo", fmt.Sprintf("%T", a.RecordRepo),
+		"fileSub", a.AuditFileSub,
+		"RemoteSub", a.AuditRemoteSub,
 	)
-	handler := handler.New(a.Service)
+	handler := handler.New(a.Service, a.Audit)
 	router := router.New(handler)
 	router = httputil.AddMiddlewares(
 		router,

@@ -34,6 +34,7 @@ func (h *Handler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	shortURL, err := h.service.Shorten(r.Context(), user, req.URL)
+	h.audit.Shortened(user.ID, req.URL)
 	var invalidURLErr *model.InvalidURLError
 	if errors.As(err, &invalidURLErr) {
 		http.Error(w, err.Error(), http.StatusBadRequest)

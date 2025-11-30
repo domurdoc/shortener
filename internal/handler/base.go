@@ -4,16 +4,18 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/domurdoc/shortener/internal/audit"
 	"github.com/domurdoc/shortener/internal/httputil"
 	"github.com/domurdoc/shortener/internal/service"
 )
 
 type Handler struct {
 	service *service.Service
+	audit   *audit.Audit
 }
 
-func New(service *service.Service) *Handler {
-	return &Handler{service: service}
+func New(service *service.Service, audit *audit.Audit) *Handler {
+	return &Handler{service: service, audit: audit}
 }
 
 func (h *Handler) writeJSONResponse(w http.ResponseWriter, response any, status int) {

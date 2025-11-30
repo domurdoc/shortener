@@ -13,6 +13,8 @@ func parseEnv(options *Options) {
 	setOptionFromEnv(&options.DeleterMaxWorkers, "DELETER_MAX_WORKERS")
 	setOptionFromEnv(&options.DeleterMaxBatchSize, "DELETER_MAX_BATCH_SIZE")
 	setOptionFromEnv(&options.DeleterCheckInterval, "DELETER_CHECK_INTERVAL")
+	setOptionFromEnv(&options.AuditFile, "AUDIT_FILE")
+	setOptionFromEnv(&options.AuditURL, "AUDIT_URL")
 }
 
 func setOptionFromEnv(s option, envName string) {

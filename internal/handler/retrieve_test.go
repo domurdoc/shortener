@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/domurdoc/shortener/internal/audit"
 	"github.com/domurdoc/shortener/internal/auth"
 
 	"github.com/domurdoc/shortener/internal/auth/strategy"
@@ -67,7 +68,8 @@ func TestShortener_Retrieve(t *testing.T) {
 				nil,
 				nil,
 			)
-			handler := New(service)
+			audit := audit.New()
+			handler := New(service, audit)
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
 				user, _ := a.Register(context.TODO())

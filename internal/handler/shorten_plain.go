@@ -22,6 +22,7 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	}
 	longURL := string(buf[:n])
 	shortURL, err := h.service.Shorten(r.Context(), user, longURL)
+	h.audit.Shortened(user.ID, longURL)
 	var invalidURLErr *model.InvalidURLError
 	if errors.As(err, &invalidURLErr) {
 		http.Error(w, err.Error(), http.StatusBadRequest)

@@ -77,4 +77,7 @@ test14: kill re
 test15: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration15$$ -binary-path=${BIN} -database-dsn=${DSN}
 
-PHONY: run exe re kill m mm md test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15
+test16: kill re
+	./${TESTBIN} -test.v -test.run=^TestIteration16$$ -source-path=.
+
+PHONY: run exe re kill m mm md test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15 test16
