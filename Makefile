@@ -4,6 +4,9 @@ DSN = postgresql://domurdoc@localhost:5432/test?sslmode=disable
 FILE = db.json
 DIR = .
 MAIN = cmd/shortener/main.go
+LOAD = cmd/loadtest/main.go
+LOAD_PORT = 8888
+PROFILE_FILE = profiles/result.pprof
 MNAME = unnamed
 TESTBIN = shortenertest
 WIPEDBBIN = wipedb
@@ -30,7 +33,16 @@ m:
 md:
 	migrate -database "${DSN}" -path ./migrations down 1
 
-test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15
+load:
+	go run ${LOAD}
+
+prof:
+	curl -s -v -o ${PROFILE_FILE} http://localhost:${LOAD_PORT}/debug/pprof/heap?seconds=30
+
+showprof:
+	go tool pprof -http=":9090" -seconds=30 ${PROFILE_FILE}
+
+test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15 test16 test17
 
 test1: kill
 	./${TESTBIN} -test.v -test.run=^TestIteration1$$ -binary-path=${BIN}
@@ -80,4 +92,7 @@ test15: kill re
 test16: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration16$$ -source-path=.
 
-PHONY: run exe re kill m mm md test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15 test16
+test17: kill re
+	./${TESTBIN} -test.v -test.run=^TestIteration17$$ -source-path=.
+
+PHONY: run exe re kill m mm md load prof showprof test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15 test16 test17

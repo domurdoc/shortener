@@ -15,6 +15,7 @@ func parseEnv(options *Options) {
 	setOptionFromEnv(&options.DeleterCheckInterval, "DELETER_CHECK_INTERVAL")
 	setOptionFromEnv(&options.AuditFile, "AUDIT_FILE")
 	setOptionFromEnv(&options.AuditURL, "AUDIT_URL")
+	setOptionFromEnv(&options.ProfileAddr, "PPROF_ADDRESS")
 }
 
 func setOptionFromEnv(s option, envName string) {

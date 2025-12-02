@@ -30,6 +30,7 @@ func main() {
 		"repo", fmt.Sprintf("%T", a.RecordRepo),
 		"fileSub", a.AuditFileSub,
 		"RemoteSub", a.AuditRemoteSub,
+		"ProfileServer", a.Options.ProfileAddr,
 	)
 	handler := handler.New(a.Service, a.Audit)
 	router := router.New(handler)

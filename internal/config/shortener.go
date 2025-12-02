@@ -22,6 +22,7 @@ func LoadOptions() *Options {
 		"2s",
 		"",
 		"1",
+		"localhost:8888",
 	)
 	parseArgs(options)
 	parseEnv(options)
