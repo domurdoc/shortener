@@ -19,6 +19,7 @@ type Options struct {
 	AuditFileBatchInterval Duration
 	AuditURL               String
 	AuditRemotePoolSize    Integer
+	ProfileAddr            String
 }
 
 func New(
@@ -39,7 +40,8 @@ func New(
 	auditFileMaxBatchSize,
 	auditFileBatchInterval,
 	auditURL,
-	auditRemotePoolSize string,
+	auditRemotePoolSize,
+	profileAddr string,
 ) *Options {
 	options := Options{}
 	setOptionFromString(&options.BaseURL, baseURL)
@@ -60,6 +62,7 @@ func New(
 	setOptionFromString(&options.AuditFileBatchInterval, auditFileBatchInterval)
 	setOptionFromString(&options.AuditURL, auditURL)
 	setOptionFromString(&options.AuditRemotePoolSize, auditRemotePoolSize)
+	setOptionFromString(&options.ProfileAddr, profileAddr)
 	return &options
 }
 

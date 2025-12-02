@@ -13,5 +13,6 @@ func parseArgs(options *Options) {
 	flag.Var(&options.DeleterCheckInterval, "c", "deleter check interval")
 	flag.Var(&options.AuditFile, "audit-file", "audit file")
 	flag.Var(&options.AuditURL, "audit-url", "audit url")
+	flag.Var(&options.ProfileAddr, "p", "pprof address")
 	flag.Parse()
 }

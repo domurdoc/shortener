@@ -1,8 +1,13 @@
 package app
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -24,16 +29,18 @@ import (
 )
 
 type App struct {
-	Options        *config.Options
-	RecordRepo     repository.RecordRepo
-	UserRepo       repository.UserRepo
-	Log            *zap.SugaredLogger
-	Service        *service.Service
-	DB             *sql.DB
-	Auth           *auth.Auth
-	Audit          *audit.Audit
-	AuditFileSub   *subscribers.FileSubscriber
-	AuditRemoteSub *subscribers.RemoteSubscriber
+	Options         *config.Options
+	RecordRepo      repository.RecordRepo
+	UserRepo        repository.UserRepo
+	Log             *zap.SugaredLogger
+	Service         *service.Service
+	DB              *sql.DB
+	Auth            *auth.Auth
+	Audit           *audit.Audit
+	AuditFileSub    *subscribers.FileSubscriber
+	AuditRemoteSub  *subscribers.RemoteSubscriber
+	ProfileServer   *http.Server
+	profileServerWG sync.WaitGroup
 }
 
 func New() (*App, error) {
@@ -53,12 +60,19 @@ func New() (*App, error) {
 	if err := a.initAudit(); err != nil {
 		return nil, errors.Join(err, a.Close())
 	}
+	if err := a.initProfileServer(); err != nil {
+		return nil, errors.Join(err, a.Close())
+	}
 	return a, nil
 }
 
 func (a *App) Close() error {
 	var errs []error
 
+	if a.ProfileServer != nil {
+		errs = append(errs, a.ProfileServer.Shutdown(context.Background()))
+		a.profileServerWG.Wait()
+	}
 	if a.AuditFileSub != nil {
 		errs = append(errs, a.AuditFileSub.Close())
 	}
@@ -146,7 +160,7 @@ func (a *App) initAuth() error {
 func (a *App) initAudit() error {
 	a.Audit = audit.New()
 
-	if a.Options.AuditFile != "" {
+	if a.Options.AuditFile.String() != "" {
 		a.AuditFileSub = subscribers.NewFile(
 			a.Options.AuditFile.String(),
 			int(a.Options.AuditFilePoolSize),
@@ -164,5 +178,24 @@ func (a *App) initAudit() error {
 		)
 		a.Audit.Register(a.AuditRemoteSub)
 	}
+	return nil
+}
+
+func (a *App) initProfileServer() error {
+	if a.Options.ProfileAddr.String() == "" {
+		return nil
+	}
+	// https://stackoverflow.com/a/42533360
+	server := &http.Server{Addr: a.Options.ProfileAddr.String()}
+
+	a.profileServerWG.Add(1)
+	go func() {
+		defer a.profileServerWG.Done()
+
+		if err := server.ListenAndServe(); err != nil {
+			log.Fatalf("ProfileServer.ListenAndServe(): %v", err)
+		}
+	}()
+	a.ProfileServer = server
 	return nil
 }
