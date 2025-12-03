@@ -12,11 +12,14 @@ import (
 const actionShorten = "shorten"
 const actionFollow = "follow"
 
+// Event represents an audit log entry capturing a user action within the system.
+// It includes the timestamp, action type, user identifier, and target URL.
+// The JSON serialization is customized to format TS as Unix timestamp and UserID as a string.
 type Event struct {
-	TS     time.Time    `json:"-"`
-	Action string       `json:"action"`
-	UserID model.UserID `json:"-"`
-	URL    string       `json:"url"`
+	TS     time.Time    `json:"-"`      // TS is the timestamp of the event (excluded from JSON, serialized manually).
+	Action string       `json:"action"` // Action describes the type of operation (e.g., "shorten", "follow").
+	UserID model.UserID `json:"-"`      // UserID identifies the user who performed the action (excluded from JSON, serialized manually).
+	URL    string       `json:"url"`    // URL is the target URL involved in the action.
 }
 
 func newEvent(action string, userID model.UserID, url string) *Event {

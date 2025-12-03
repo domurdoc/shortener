@@ -15,6 +15,12 @@ import (
 	"github.com/domurdoc/shortener/internal/repository/mem"
 )
 
+// FileRepo is a file-based implementation of the RecordRepo interface.
+// It persists URL records and user associations to a file using a configurable serializer.
+// All operations are thread-safe via a mutex.
+//
+// Note: Currently uses a simple mutex for synchronization; consider file locking
+// in distributed environments.
 type FileRepo struct {
 	filepath   string
 	serializer serializer.Serializer

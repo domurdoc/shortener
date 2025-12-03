@@ -21,6 +21,30 @@ type jsonBatchResponseItem struct {
 	ShortURL      string `json:"short_url"`
 }
 
+// ShortenBatchJSON handles a JSON-based batch request to shorten multiple URLs at once.
+// It preserves the order of requests and includes correlation IDs in the response.
+//
+// Parameters:
+//   - w: The HTTP response writer.
+//   - r: The HTTP request, which must contain a JSON array of jsonBatchRequestItem.
+//
+// Behavior:
+//   - Extracts the authenticated user from the request context.
+//   - Validates that the Content-Type is application/json.
+//   - Decodes the JSON request body into a slice of jsonBatchRequestItem.
+//   - Ensures at least one item is provided.
+//   - Extracts original URLs and passes them to h.service.ShortenBatch.
+//   - Constructs a response with correlation IDs preserved.
+//
+// Status Codes:
+//   - 201 Created on full success.
+//   - 400 Bad Request if Content-Type is invalid, JSON is malformed, or no items are provided.
+//   - 409 Conflict if some URLs already exist (partial success with conflict details).
+//   - 500 Internal Server Error for unexpected service errors.
+//
+// Error Handling:
+//   - *model.InvalidURLError results in 400.
+//   - model.BatchOriginalURLExistsError results in 409 with partial response.
 func (h *Handler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 	var reqItems []jsonBatchRequestItem
 
@@ -43,7 +67,7 @@ func (h *Handler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 	for i, jsonRequest := range reqItems {
 		originalURLS[i] = jsonRequest.OriginalURL
 	}
-	shortURLS, err := h.service.ShortenBatch(r.Context(), user, originalURLS)
+	shortURLS, err := h.app.Service.ShortenBatch(r.Context(), user, originalURLS)
 	var invalidURLErr *model.InvalidURLError
 	if errors.As(err, &invalidURLErr) {
 		http.Error(w, err.Error(), http.StatusBadRequest)

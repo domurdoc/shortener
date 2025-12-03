@@ -6,14 +6,10 @@ import (
 	"net/url"
 
 	"github.com/domurdoc/shortener/internal/model"
-	"github.com/domurdoc/shortener/internal/utils"
 )
 
 // 2048 - max url length (RFC)
-const (
-	URLMaxLength    = 2048
-	shortCodeLength = 6
-)
+const URLMaxLength = 2048
 
 func (s *Service) Shorten(ctx context.Context, user *model.User, originalURL string) (string, error) {
 	shortCode, shortURL, err := s.generateShortCodeURL(originalURL)
@@ -105,7 +101,10 @@ func (s *Service) generateShortCodeURL(originalURL string) (string, string, erro
 	if err := validateURL(originalURL); err != nil {
 		return "", "", err
 	}
-	shortCode := utils.GenerateRandomString(utils.ALPHA, shortCodeLength)
+	shortCode, err := s.gen.Generate()
+	if err != nil {
+		return "", "", err
+	}
 	shortURL, err := url.JoinPath(s.baseURL, shortCode)
 	if err != nil {
 		return "", "", err

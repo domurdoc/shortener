@@ -5,19 +5,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/domurdoc/shortener/internal/audit"
-	"github.com/domurdoc/shortener/internal/auth"
-
-	"github.com/domurdoc/shortener/internal/auth/strategy"
-	"github.com/domurdoc/shortener/internal/auth/transport"
 	"github.com/domurdoc/shortener/internal/model"
-	"github.com/domurdoc/shortener/internal/repository/mem"
-	"github.com/domurdoc/shortener/internal/service"
 )
 
 func TestShortener_Retrieve(t *testing.T) {
@@ -48,36 +40,16 @@ func TestShortener_Retrieve(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			debugStrategy := strategy.NewDebug()
-			bearerTransport := transport.NewBearer("Authorization")
-			userRepo := mem.NewMemUserRepo()
-
-			a := auth.New(
-				debugStrategy,
-				bearerTransport,
-				userRepo,
-			)
-
-			repo := mem.NewMemRecordRepo()
-			service := service.New(
-				"",
-				1,
-				1,
-				time.Second,
-				repo,
-				nil,
-				nil,
-			)
-			audit := audit.New()
-			handler := New(service, audit)
+			app, handler := getAppHandler()
+			defer app.Close(nil)
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
-				user, _ := a.Register(context.TODO())
+				user, _ := app.Auth.Register(context.TODO())
 				record := &model.BaseRecord{
 					OriginalURL: model.OriginalURL(tt.want.location),
 					ShortCode:   model.ShortCode(tt.shortCode),
 				}
-				err := repo.Store(context.TODO(), record, user.ID)
+				err := app.RecordRepo.Store(context.TODO(), record, user.ID)
 				require.NoError(t, err)
 			}
 

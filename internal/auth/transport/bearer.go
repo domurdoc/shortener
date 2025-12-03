@@ -6,8 +6,11 @@ import (
 	"strings"
 )
 
+// BearerTransport is a Transport implementation that reads and writes authentication tokens
+// using the HTTP Authorization header with the "Bearer" scheme.
+// It allows customization of the header name (typically "Authorization").
 type BearerTransport struct {
-	header string
+	header string // header specifies the HTTP header name to use (e.g., "Authorization").
 }
 
 func NewBearer(header string) *BearerTransport {

@@ -8,6 +8,10 @@ import (
 	"github.com/domurdoc/shortener/internal/repository"
 )
 
+// DebugStrategy is a simple authentication strategy intended for development or testing purposes.
+// It does not provide real security and should not be used in production.
+// It generates predictable tokens and bypasses typical validation mechanisms,
+// making it useful for debugging or environments where authentication is not required.
 type DebugStrategy struct{}
 
 func NewDebug() *DebugStrategy {

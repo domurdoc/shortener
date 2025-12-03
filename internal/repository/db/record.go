@@ -11,6 +11,9 @@ import (
 	"github.com/domurdoc/shortener/internal/model"
 )
 
+// DBRecordRepo is a PostgreSQL-backed implementation of the RecordRepo interface.
+// It uses a database connection to persist URL records and user ownership relationships.
+// The repository supports safe concurrency and transactional integrity.
 type DBRecordRepo struct {
 	db       *sql.DB
 	newArger func() db.Arger
