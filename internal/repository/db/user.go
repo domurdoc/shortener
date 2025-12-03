@@ -10,6 +10,8 @@ import (
 	"github.com/domurdoc/shortener/internal/model"
 )
 
+// DBUserRepo is a PostgreSQL-backed implementation of the UserRepo interface.
+// It provides methods to create and retrieve users from the database.
 type DBUserRepo struct {
 	db       *sql.DB
 	newArger func() db.Arger

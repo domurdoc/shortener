@@ -12,15 +12,19 @@ import (
 	"github.com/domurdoc/shortener/internal/audit"
 )
 
+// RemoteSubscriber is a concrete implementation of audit.Subscriber that sends audit events to a remote HTTP endpoint.
+// It uses a pool of worker goroutines to concurrently transmit events in the background.
+// Events are sent as JSON over HTTP POST requests, and failed attempts are logged but not retried.
+// The subscriber ensures graceful shutdown by waiting for active workers to finish.
 type RemoteSubscriber struct {
-	id       string
-	url      string
-	events   chan *audit.Event
-	poolSize int
-	wg       sync.WaitGroup
-	doneCh   chan struct{}
-	log      *zap.SugaredLogger
-	client   *resty.Client
+	id       string             // id is the unique identifier for this subscriber.
+	url      string             // url is the remote HTTP endpoint to which audit events are sent.
+	events   chan *audit.Event  // events is the channel that receives incoming audit events for transmission.
+	poolSize int                // poolSize specifies the number of concurrent worker goroutines handling event delivery.
+	wg       sync.WaitGroup     // wg tracks the active worker goroutines to ensure all finish during shutdown.
+	doneCh   chan struct{}      // doneCh signals the subscriber to stop processing events.
+	log      *zap.SugaredLogger // log is the logger used for internal logging, including transmission errors.
+	client   *resty.Client      // client is the HTTP client used for sending requests to the remote endpoint.
 }
 
 func NewRemote(url string, log *zap.SugaredLogger, poolSize int) *RemoteSubscriber {

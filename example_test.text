@@ -1,0 +1,152 @@
+package handler
+
+import (
+	"bytes"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+
+	"github.com/domurdoc/shortener/internal/app"
+)
+
+// ExampleHandler_CreateShortURL demonstrates how to create a short URL using the POST /api/shorten endpoint.
+func ExampleHandler_CreateShortURL() {
+	// Start the application (assumes config is loaded)
+	app, handler := getAppHandler()
+
+	http.HandleFunc()
+	defer app.Close(nil)
+
+	// Create a test HTTP server from the app's handler
+	ts := httptest.NewServer(handler)
+	defer ts.Close()
+
+	// Define the request payload
+	payload := map[string]string{"url": "https://example.com/very/long/path"}
+	body, _ := json.Marshal(payload)
+
+	// Make the request
+	resp, _ := http.Post(ts.URL+"/api/shorten", "application/json", bytes.NewBuffer(body))
+	defer resp.Body.Close()
+
+	// Read and print the response
+	io.Copy(nil, resp.Body)
+	// Output status code 201 Created and short URL in response body
+}
+
+// ExampleHandler_Redirect demonstrates how to follow a shortened URL using the GET /{id} endpoint.
+func ExampleHandler_Redirect() {
+	// Start the application
+	a, _ := app.New()
+	defer a.Close()
+
+	// Create a test HTTP server
+	ts := httptest.NewServer(a.Handler())
+	defer ts.Close()
+
+	// Assume a short URL with ID "abc123" exists
+	req, _ := http.NewRequest("GET", ts.URL+"/abc123", nil)
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Prevent redirect, just capture it
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+
+	// Print redirect status and target URL
+	println(resp.StatusCode) // Should be 307 Temporary Redirect
+	println(resp.Header.Get("Location"))
+	// Output: 307
+	// https://example.com/very/long/path
+}
+
+// ExampleHandler_GetUserURLs demonstrates how to retrieve all shortened URLs for the authenticated user
+// using the GET /api/user/urls endpoint.
+func ExampleHandler_GetUserURLs() {
+	// Start the application
+	a, _ := app.New()
+	defer a.Close()
+
+	// Create a test server
+	ts := httptest.NewServer(a.Handler())
+	defer ts.Close()
+
+	// Create a request
+	req, _ := http.NewRequest("GET", ts.URL+"/api/user/urls", nil)
+
+	// Add authentication cookie (assumes valid session)
+	cookie := &http.Cookie{
+		Name:  "auth_token",
+		Value: "valid-jwt-token-here",
+	}
+	req.AddCookie(cookie)
+
+	// Send request
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+
+	// Print response
+	io.Copy(nil, resp.Body)
+	// Output: 200 OK and JSON array of user's shortened URLs
+}
+
+// ExampleHandler_DeleteUserURLs demonstrates how to delete multiple shortened URLs
+// using the DELETE /api/user/urls endpoint.
+func ExampleHandler_DeleteUserURLs() {
+	// Start the application
+	a, _ := app.New()
+	defer a.Close()
+
+	// Create a test server
+	ts := httptest.NewServer(a.Handler())
+	defer ts.Close()
+
+	// Define the IDs to delete
+	ids := []string{"abc123", "def456"}
+	body, _ := json.Marshal(ids)
+
+	// Create request
+	req, _ := http.NewRequest("DELETE", ts.URL+"/api/user/urls", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	// Add authentication
+	cookie := &http.Cookie{
+		Name:  "auth_token",
+		Value: "valid-jwt-token-here",
+	}
+	req.AddCookie(cookie)
+
+	// Send request
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	defer resp.Body.Close()
+
+	// Print result
+	println(resp.StatusCode)
+	// Output: 202 Accepted (deletion is asynchronous)
+}
+
+// ExampleHandler_HealthCheck demonstrates how to check service health
+// using the GET /ping endpoint.
+func ExampleHandler_HealthCheck() {
+	// Start the application
+	a, _ := app.New()
+	defer a.Close()
+
+	// Create a test server
+	ts := httptest.NewServer(a.Handler())
+	defer ts.Close()
+
+	// Make request
+	resp, _ := http.Get(ts.URL + "/ping")
+	defer resp.Body.Close()
+
+	// Print status
+	println(resp.StatusCode)
+	// Output: 200 OK if database is reachable
+}

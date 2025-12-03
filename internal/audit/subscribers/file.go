@@ -15,18 +15,21 @@ import (
 	"github.com/domurdoc/shortener/internal/utils"
 )
 
+// FileSubscriber is a concrete implementation of audit.Subscriber that writes audit events to a file.
+// It batches events to reduce I/O operations and flushes them periodically or when the batch limit is reached.
+// The subscriber runs a pool of worker goroutines to handle event processing and ensures graceful shutdown.
 type FileSubscriber struct {
-	id            string
-	filePath      string
-	events        chan *audit.Event
-	eventBatch    chan []*audit.Event
-	poolSize      int
-	maxBatchSize  int
-	batchInterval time.Duration
-	wg            sync.WaitGroup
-	doneCh        chan struct{}
-	log           *zap.SugaredLogger
-	mu            sync.Mutex
+	id            string              // id is the unique identifier for this subscriber.
+	filePath      string              // filePath is the destination file path for audit logs.
+	events        chan *audit.Event   // events is the channel that receives incoming audit events.
+	eventBatch    chan []*audit.Event // eventBatch is the channel that sends batches of events to workers for writing.
+	poolSize      int                 // poolSize specifies the number of concurrent worker goroutines.
+	maxBatchSize  int                 // maxBatchSize is the maximum number of events to include in a single batch.
+	batchInterval time.Duration       // batchInterval is the frequency at which pending events are flushed to disk.
+	wg            sync.WaitGroup      // wg tracks the active worker goroutines for graceful shutdown.
+	doneCh        chan struct{}       // doneCh signals the subscriber to stop processing events.
+	log           *zap.SugaredLogger  // log is the logger used for internal logging.
+	mu            sync.Mutex          // mu protects access to shared mutable state (e.g., during Close).
 }
 
 func NewFile(filePath string, poolSize int, maxBatchSize int, batchInterval time.Duration, log *zap.SugaredLogger) *FileSubscriber {
