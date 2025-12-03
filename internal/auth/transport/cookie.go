@@ -2,13 +2,16 @@ package transport
 
 import "net/http"
 
+// CookieTransport is a Transport implementation that reads and writes authentication tokens
+// using HTTP cookies. It allows configuration of various cookie attributes to control
+// security and scope, such as name, lifetime, path, and SameSite policy.
 type CookieTransport struct {
-	name     string
-	maxAge   int
-	secure   bool
-	httpOnly bool
-	path     string
-	sameSite http.SameSite
+	name     string        // name is the cookie name used to store the token.
+	maxAge   int           // maxAge specifies the lifetime of the cookie in seconds.
+	secure   bool          // secure indicates that the cookie should only be sent over HTTPS.
+	httpOnly bool          // httpOnly prevents client-side JavaScript access to the cookie.
+	path     string        // path limits the scope of the cookie to a specific URL path.
+	sameSite http.SameSite // sameSite controls whether the cookie is sent with cross-site requests.
 }
 
 func NewCookie(name string, maxAge int, secure bool) *CookieTransport {

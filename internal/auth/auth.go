@@ -11,10 +11,14 @@ import (
 	"github.com/domurdoc/shortener/internal/repository"
 )
 
+// Auth is responsible for handling user authentication and authorization in the application.
+// It combines a strategy for token management (e.g., JWT) and a transport mechanism (e.g., cookies)
+// to authenticate requests and manage user sessions.
+// It also interacts with a user repository to load user data when needed.
 type Auth struct {
-	strategy  strategy.Strategy
-	transport transport.Transport
-	repo      repository.UserRepo
+	strategy  strategy.Strategy   // strategy defines how tokens are created, parsed, and validated (e.g., JWT).
+	transport transport.Transport // transport defines how authentication data is exchanged with the client (e.g., via cookies).
+	repo      repository.UserRepo // repo is used to retrieve user information during authentication when necessary.
 }
 
 func New(strategy strategy.Strategy, transport transport.Transport, repo repository.UserRepo) *Auth {

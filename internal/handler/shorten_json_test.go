@@ -8,18 +8,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/domurdoc/shortener/internal/audit"
 	"github.com/domurdoc/shortener/internal/auth"
-	"github.com/domurdoc/shortener/internal/auth/strategy"
-	"github.com/domurdoc/shortener/internal/auth/transport"
 	"github.com/domurdoc/shortener/internal/httputil"
-	"github.com/domurdoc/shortener/internal/repository/mem"
-	"github.com/domurdoc/shortener/internal/service"
 )
 
 func TestShortener_ShortenJSON(t *testing.T) {
@@ -93,32 +87,14 @@ func TestShortener_ShortenJSON(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			debugStrategy := strategy.NewDebug()
-			bearerTransport := transport.NewBearer("Authorization")
-			userRepo := mem.NewMemUserRepo()
-
-			a := auth.New(
-				debugStrategy,
-				bearerTransport,
-				userRepo,
-			)
-			service := service.New(
-				"http://localhost:8081",
-				1,
-				1,
-				time.Second,
-				mem.NewMemRecordRepo(),
-				nil,
-				nil,
-			)
-			audit := audit.New()
-			handler := New(service, audit)
+			app, handler := getAppHandler()
+			defer app.Close(nil)
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
 			r.Header.Set(httputil.HeaderContentType, tt.contentType)
 			w := httptest.NewRecorder()
 
-			user, err := a.AuthenticateOrRegisterAndLogin(context.TODO(), w, r)
+			user, err := app.Auth.AuthenticateOrRegisterAndLogin(context.TODO(), w, r)
 			assert.NoError(t, err)
 
 			handler.ShortenJSON(w, auth.AttachUser(r, user))

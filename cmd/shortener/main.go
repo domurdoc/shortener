@@ -8,6 +8,7 @@ import (
 	"github.com/domurdoc/shortener/internal/app"
 	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/compressor"
+	"github.com/domurdoc/shortener/internal/config"
 	"github.com/domurdoc/shortener/internal/handler"
 	"github.com/domurdoc/shortener/internal/httputil"
 	"github.com/domurdoc/shortener/internal/logger"
@@ -15,24 +16,29 @@ import (
 )
 
 func main() {
-	a, err := app.New()
+	cfg := config.New()
+	if err := config.ParseEnv(cfg); err != nil {
+		log.Fatal(err)
+	}
+	config.ParseArgs(cfg)
+	a, err := app.New(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer a.Close()
+	defer a.Close(nil)
 	a.Log.Infow(
 		"starting server",
-		"addr", a.Options.Addr,
-		"baseURL", a.Options.BaseURL,
-		"logLevel", a.Options.LogLevel,
-		"fileStoragePath", a.Options.FileStoragePath,
-		"databaseDSN", a.Options.DatabaseDSN,
+		"addr", a.Config.Server.Address,
+		"baseURL", a.Config.Service.BaseURL,
+		"logLevel", a.Config.Logger.Level,
+		"fileStoragePath", a.Config.Repositories.File.Path,
+		"databaseDSN", a.Config.Repositories.DB.DSN,
 		"repo", fmt.Sprintf("%T", a.RecordRepo),
 		"fileSub", a.AuditFileSub,
 		"RemoteSub", a.AuditRemoteSub,
-		"ProfileServer", a.Options.ProfileAddr,
+		"ProfileServer", a.Config.Profiler.Address,
 	)
-	handler := handler.New(a.Service, a.Audit)
+	handler := handler.New(a)
 	router := router.New(handler)
 	router = httputil.AddMiddlewares(
 		router,
@@ -40,5 +46,5 @@ func main() {
 		auth.NewAuthMiddleware(a.Auth),
 		compressor.GZIPMiddleware,
 	)
-	log.Fatal(http.ListenAndServe(a.Options.Addr.String(), router))
+	log.Fatal(http.ListenAndServe(a.Config.Server.Address, router))
 }

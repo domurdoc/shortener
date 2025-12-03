@@ -4,18 +4,19 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/domurdoc/shortener/internal/audit"
+	"github.com/domurdoc/shortener/internal/app"
 	"github.com/domurdoc/shortener/internal/httputil"
-	"github.com/domurdoc/shortener/internal/service"
 )
 
+// Handler encapsulates HTTP request handlers for the shortener application.
+// It acts as a bridge between HTTP routes and business logic in the service layer.
+// It also includes an audit component for tracking user actions.
 type Handler struct {
-	service *service.Service
-	audit   *audit.Audit
+	app *app.App
 }
 
-func New(service *service.Service, audit *audit.Audit) *Handler {
-	return &Handler{service: service, audit: audit}
+func New(a *app.App) *Handler {
+	return &Handler{app: a}
 }
 
 func (h *Handler) writeJSONResponse(w http.ResponseWriter, response any, status int) {
