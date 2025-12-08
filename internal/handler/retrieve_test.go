@@ -49,7 +49,7 @@ func TestShortener_Retrieve(t *testing.T) {
 					OriginalURL: model.OriginalURL(tt.want.location),
 					ShortCode:   model.ShortCode(tt.shortCode),
 				}
-				err := app.RecordRepo.Store(context.TODO(), record, user.ID)
+				err := app.Repos.Record.Store(context.TODO(), record, user.ID)
 				require.NoError(t, err)
 			}
 

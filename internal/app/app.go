@@ -1,7 +1,6 @@
 package app
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	_ "net/http/pprof"
@@ -9,21 +8,13 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/domurdoc/shortener/internal/audit"
-	"github.com/domurdoc/shortener/internal/audit/subscribers"
 	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/auth/strategy"
 	"github.com/domurdoc/shortener/internal/auth/transport"
 	"github.com/domurdoc/shortener/internal/config"
-	"github.com/domurdoc/shortener/internal/config/db"
 	"github.com/domurdoc/shortener/internal/generator"
 	"github.com/domurdoc/shortener/internal/logger"
 	"github.com/domurdoc/shortener/internal/profiler"
-	"github.com/domurdoc/shortener/internal/repository"
-	dbRepo "github.com/domurdoc/shortener/internal/repository/db"
-	fileRepo "github.com/domurdoc/shortener/internal/repository/file"
-	"github.com/domurdoc/shortener/internal/repository/file/serializer"
-	memRepo "github.com/domurdoc/shortener/internal/repository/mem"
 	"github.com/domurdoc/shortener/internal/service"
 	"github.com/domurdoc/shortener/internal/utils"
 )
@@ -31,18 +22,14 @@ import (
 // App represents the main application structure that holds all components and configuration.
 // It manages the lifecycle of repositories, services, authentication, audit logging, and profiling.
 type App struct {
-	Config         *config.Config                // Options contains the application configuration.
-	RecordRepo     repository.RecordRepo         // RecordRepo is the repository for managing URL records.
-	UserRepo       repository.UserRepo           // UserRepo is the repository for managing users.
-	Log            *zap.SugaredLogger            // Log is the logger instance used across the application.
-	Service        *service.Service              // Service is the core business logic service for URL operations.
-	DB             *sql.DB                       // DB holds the database connection if using PostgreSQL.
-	Auth           *auth.Auth                    // Auth manages authentication using JWT and cookies.
-	Audit          *audit.Audit                  // Audit is the audit event dispatcher for logging actions.
-	AuditFileSub   *subscribers.FileSubscriber   // AuditFileSub is the subscriber for writing audit logs to a file.
-	AuditRemoteSub *subscribers.RemoteSubscriber // AuditRemoteSub is the subscriber for sending audit logs to a remote service.
-	Profiler       *profiler.Profiler            // Profiler is the profiling server for monitoring performance.
-	closer         utils.Closer
+	Config   *config.Config     // Options contains the application configuration.
+	Log      *zap.SugaredLogger // Log is the logger instance used across the application.
+	Service  *service.Service   // Service is the core business logic service for URL operations.
+	Repos    *Repositories      // Repositories manages database connections and repositories.
+	Auth     *auth.Auth         // Auth manages authentication using JWT and cookies.
+	Audit    *Audit             // Audit is the application-specific audit event handler.
+	Profiler *profiler.Profiler // Profiler is the profiling server for monitoring performance.
+	closer   utils.Closer
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -62,7 +49,7 @@ func New(cfg *config.Config) (*App, error) {
 	if err := a.initAudit(); err != nil {
 		return nil, a.Close(err)
 	}
-	if err := a.initProfileServer(); err != nil {
+	if err := a.initProfiler(); err != nil {
 		return nil, a.Close(err)
 	}
 	return a, nil
@@ -83,33 +70,11 @@ func (a *App) initLog() error {
 }
 
 func (a *App) initRepo() error {
-	if a.Config.Repositories.DB.DSN != "" {
-		pgDB, err := db.NewPG(a.Config.Repositories.DB.DSN)
-		if err != nil {
-			return err
-		}
-		a.DB = pgDB
-		a.closer.Register(a.DB.Close)
-		if err := db.MigratePG(pgDB); err != nil {
-			return err
-		}
-		a.RecordRepo = dbRepo.NewDBRecordRepo(pgDB, db.NewPGArger)
-		a.UserRepo = dbRepo.NewDBUserRepo(pgDB, db.NewPGArger)
-	} else if a.Config.Repositories.File.Path != "" {
-		jsonSerializer := serializer.NewJSONSerializer()
-		repo, err := fileRepo.New(
-			a.Config.Repositories.File.Path,
-			jsonSerializer,
-		)
-		if err != nil {
-			return err
-		}
-		a.RecordRepo = repo
-		a.UserRepo = memRepo.NewMemUserRepo()
-	} else {
-		a.RecordRepo = memRepo.NewMemRecordRepo()
-		a.UserRepo = memRepo.NewMemUserRepo()
+	r, err := NewRepositories(a.Config, a.Log)
+	if err != nil {
+		return err
 	}
+	a.Repos = r
 	return nil
 }
 
@@ -133,9 +98,9 @@ func (a *App) initService() error {
 		a.Config.Service.DeleterMaxWorkers,
 		a.Config.Service.DeleterMaxBatchSize,
 		time.Duration(a.Config.Service.DeleterCheckInterval),
-		a.RecordRepo,
+		a.Repos.Record,
 		a.Log,
-		a.DB,
+		a.Repos.DB,
 		gen,
 	)
 	a.closer.Register(a.Service.Close)
@@ -153,41 +118,22 @@ func (a *App) initAuth() error {
 		int(a.Config.Auth.Transport.CookieMaxAge.Seconds()),
 		false,
 	)
-	a.Auth = auth.New(strategy, transport, a.UserRepo)
+	a.Auth = auth.New(strategy, transport, a.Repos.User)
 	return nil
 }
 
 func (a *App) initAudit() error {
-	a.Audit = audit.New()
-
-	if a.Config.Audit.File.Path != "" {
-		a.AuditFileSub = subscribers.NewFile(
-			a.Config.Audit.File.Path,
-			a.Config.Audit.File.PoolSize,
-			a.Config.Audit.File.MaxBatchSize,
-			a.Config.Audit.File.BatchInterval,
-			a.Log,
-		)
-		a.closer.Register(a.AuditFileSub.Close)
-		a.Audit.Register(a.AuditFileSub)
-	}
-	if a.Config.Audit.Remote.URL != "" {
-		a.AuditRemoteSub = subscribers.NewRemote(
-			a.Config.Audit.Remote.URL,
-			a.Log,
-			a.Config.Audit.Remote.PoolSize,
-		)
-		a.closer.Register(a.AuditRemoteSub.Close)
-		a.Audit.Register(a.AuditRemoteSub)
-	}
+	a.Audit = NewAuditApp(a.Config, a.Log)
+	a.closer.Register(a.Audit.Close)
 	return nil
 }
 
-func (a *App) initProfileServer() error {
+func (a *App) initProfiler() error {
 	if a.Config.Profiler.Address == "" {
 		return nil
 	}
-	a.Profiler = profiler.New(a.Config.Profiler.Address)
+	a.Profiler = profiler.New(a.Config.Profiler.Address, a.Log)
+	a.Profiler.Start()
 	a.closer.Register(a.Profiler.Close)
 	return nil
 }
