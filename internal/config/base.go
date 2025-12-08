@@ -31,7 +31,7 @@ type Config struct {
 			Path          string        `env:"AUDIT_FILE"`
 			PoolSize      int           `env:"AUDIT_FILE_POOL_SIZE"`
 			MaxBatchSize  int           `env:"AUDIT_FILE_MAX_BATCH_SIZE"`
-			BatchInterval time.Duration `env:"AUDIT_FILE_BACH_INTERVAL"`
+			BatchInterval time.Duration `env:"AUDIT_FILE_BATCH_INTERVAL"`
 		}
 		Remote struct {
 			URL      string `env:"AUDIT_URL"`

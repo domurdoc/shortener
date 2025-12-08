@@ -2,34 +2,34 @@ package profiler
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"sync"
+
+	"go.uber.org/zap"
 )
 
 type Profiler struct {
-	Address string
-	server  *http.Server
-	wg      *sync.WaitGroup
+	server *http.Server
+	wg     *sync.WaitGroup
+	log    *zap.SugaredLogger
 }
 
-func New(address string) *Profiler {
-	p := &Profiler{
-		Address: address,
-		wg:      &sync.WaitGroup{},
+func New(address string, log *zap.SugaredLogger) *Profiler {
+	return &Profiler{
+		wg:     &sync.WaitGroup{},
+		server: &http.Server{Addr: address},
+		log:    log,
 	}
-	p.server = &http.Server{
-		Addr: p.Address,
-	}
+}
+
+func (p *Profiler) Start() {
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
-
 		if err := p.server.ListenAndServe(); err != nil {
-			log.Fatalf("ProfileServer.ListenAndServe(): %v", err)
+			p.log.Fatalw("Profiler.ListenAndServe()", "err", err)
 		}
 	}()
-	return p
 }
 
 func (p *Profiler) Close() error {

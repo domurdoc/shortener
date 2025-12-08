@@ -31,12 +31,10 @@ func main() {
 		"addr", a.Config.Server.Address,
 		"baseURL", a.Config.Service.BaseURL,
 		"logLevel", a.Config.Logger.Level,
-		"fileStoragePath", a.Config.Repositories.File.Path,
-		"databaseDSN", a.Config.Repositories.DB.DSN,
-		"repo", fmt.Sprintf("%T", a.RecordRepo),
-		"fileSub", a.AuditFileSub,
-		"RemoteSub", a.AuditRemoteSub,
-		"ProfileServer", a.Config.Profiler.Address,
+		"Repos.Record", fmt.Sprintf("%T", a.Repos.Record),
+		"Repos.User", fmt.Sprintf("%T", a.Repos.User),
+		"audit", a.Audit,
+		"profiler", a.Config.Profiler.Address,
 	)
 	handler := handler.New(a)
 	router := router.New(handler)
@@ -46,5 +44,5 @@ func main() {
 		auth.NewAuthMiddleware(a.Auth),
 		compressor.GZIPMiddleware,
 	)
-	log.Fatal(http.ListenAndServe(a.Config.Server.Address, router))
+	a.Log.Fatalw("http.ListenAndServe()", "err", http.ListenAndServe(a.Config.Server.Address, router))
 }
