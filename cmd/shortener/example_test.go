@@ -35,7 +35,7 @@ func getAppRouter(shortCode string) (*app.App, http.Handler) {
 func ExampleHandler_Shorten() {
 	shortCode := "123456"
 	a, r := getAppRouter(shortCode)
-	defer a.Close(nil)
+	defer func() { _ = a.Close(nil) }()
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -50,7 +50,7 @@ func ExampleHandler_Shorten() {
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -70,7 +70,7 @@ func ExampleHandler_Shorten() {
 func ExampleHandler_ShortenJSON() {
 	shortCode := "123456"
 	a, r := getAppRouter(shortCode)
-	defer a.Close(nil)
+	defer func() { _ = a.Close(nil) }()
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -85,7 +85,7 @@ func ExampleHandler_ShortenJSON() {
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	result, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -105,7 +105,7 @@ func ExampleHandler_ShortenJSON() {
 func ExampleHandler_Retrieve() {
 	shortCode := "123456"
 	a, r := getAppRouter(shortCode)
-	defer a.Close(nil)
+	defer func() { _ = a.Close(nil) }()
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -120,7 +120,7 @@ func ExampleHandler_Retrieve() {
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	_, err = io.Copy(io.Discard, resp.Body)
 	if err != nil {
 		panic(err)

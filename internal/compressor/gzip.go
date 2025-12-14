@@ -75,7 +75,8 @@ func GZIPMiddleware(handler http.Handler) http.Handler {
 		if httputil.HasAcceptsEncoding(r.Header, httputil.EncodingGZIP) {
 			cw := newCompressWriter(w)
 			ow = cw
-			defer cw.Close()
+			defer func() { _ = cw.Close() }()
+
 		}
 		if httputil.HasContentEncoding(r.Header, httputil.EncodingGZIP) {
 			body, err := newCompressReader(r.Body)
@@ -83,7 +84,7 @@ func GZIPMiddleware(handler http.Handler) http.Handler {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
-			defer body.Close()
+			defer func() { _ = body.Close() }()
 			r.Body = body
 		}
 		handler.ServeHTTP(ow, r)

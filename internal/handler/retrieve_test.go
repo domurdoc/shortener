@@ -41,7 +41,7 @@ func TestShortener_Retrieve(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app, handler := getAppHandler()
-			defer app.Close(nil)
+			defer func() { _ = app.Close(nil) }()
 
 			if tt.want.statusCode == http.StatusTemporaryRedirect {
 				user, _ := app.Auth.Register(context.TODO())

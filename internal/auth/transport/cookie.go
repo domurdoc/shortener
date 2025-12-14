@@ -26,14 +26,14 @@ func NewCookie(name string, maxAge int, secure bool) *CookieTransport {
 }
 
 func (c *CookieTransport) Read(r *http.Request) (string, error) {
-	cookie, err := r.Cookie(c.name)
-	if err != nil {
-		return "", err
+	cookie, noCookieErr := r.Cookie(c.name)
+	if noCookieErr != nil {
+		return "", noCookieErr
 	}
-	if err := cookie.Valid(); err != nil {
-		return "", err
+	if invalidCookieErr := cookie.Valid(); invalidCookieErr != nil {
+		return "", invalidCookieErr
 	}
-	return cookie.Value, err
+	return cookie.Value, nil
 }
 
 func (c *CookieTransport) Write(w http.ResponseWriter, tokenString string) error {

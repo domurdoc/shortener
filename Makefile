@@ -5,6 +5,7 @@ FILE = db.json
 DIR = .
 MAIN = cmd/shortener/main.go
 LOAD = cmd/loadtest/main.go
+LINT = cmd/staticlint/main.go
 PPROF_PORT = 8888
 PROFILE_FILE = profiles/result.pprof
 MNAME = unnamed
@@ -41,6 +42,9 @@ prof:
 
 showprof:
 	go tool pprof -http=":9090" -seconds=30 ${PROFILE_FILE}
+
+lint:
+	go run ${LINT} ./...
 
 test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15 test16 test17 test18
 
@@ -98,4 +102,4 @@ test17: kill re
 test18: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration18$$ -source-path=.
 
-PHONY: run exe re kill m mm md load prof showprof test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15 test16 test17 test18
+PHONY: run exe re kill m mm md load prof showprof lint test test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15 test16 test17 test18

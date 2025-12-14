@@ -37,7 +37,7 @@ func main() {
 
 	wg.Add(options.Concurrency)
 	for range options.Concurrency {
-		crazyID := utils.GenerateRandomString(utils.ALPHA, 4)
+		crazyID := utils.MustGenerateRandomString(utils.ALPHA, 4)
 		go CrazyUser(ctx, &wg, options.Addr, crazyID)
 	}
 
@@ -60,7 +60,7 @@ func CrazyUser(ctx context.Context, wg *sync.WaitGroup, baseURL string, crazyID 
 		SetCookieJar(jar).
 		SetRedirectPolicy(resty.NoRedirectPolicy()).
 		SetTransport(&http.Transport{MaxConnsPerHost: 1})
-	defer c.Close()
+	defer func() { _ = c.Close() }()
 
 	var (
 		counter     int
@@ -94,7 +94,7 @@ func shorten(c *resty.Client, originalURL string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer r.Body.Close()
+	defer func() { _ = r.Body.Close() }()
 	if r.StatusCode() != http.StatusCreated && r.StatusCode() != http.StatusConflict {
 		return "", fmt.Errorf("request failed: status code = %d", r.StatusCode())
 	}

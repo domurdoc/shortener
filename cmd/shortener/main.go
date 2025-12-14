@@ -25,7 +25,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer a.Close(nil)
+
+	defer func() {
+		err = a.Close(nil)
+		if err != nil {
+			log.Printf("failed to close app: %v", err)
+		}
+	}()
+
 	a.Log.Infow(
 		"starting server",
 		"addr", a.Config.Server.Address,

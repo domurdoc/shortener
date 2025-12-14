@@ -64,7 +64,7 @@ func TestShortener_Shorten(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app, handler := getAppHandler()
-			defer app.Close(nil)
+			defer func() { _ = app.Close(nil) }()
 
 			r := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.longURL))
 			w := httptest.NewRecorder()

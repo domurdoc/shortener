@@ -34,7 +34,7 @@ type FileSubscriber struct {
 
 func NewFile(filePath string, poolSize int, maxBatchSize int, batchInterval time.Duration, log *zap.SugaredLogger) *FileSubscriber {
 	s := &FileSubscriber{
-		id:            "FileSub_" + utils.GenerateRandomString(utils.ALPHA, 4),
+		id:            "FileSub_" + utils.MustGenerateRandomString(utils.ALPHA, 4),
 		filePath:      filePath,
 		events:        make(chan *audit.Event),
 		eventBatch:    make(chan []*audit.Event),
@@ -134,7 +134,7 @@ func (s *FileSubscriber) write(_ context.Context, events []*audit.Event) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	data, err := serializeEvents(events)
 	if err != nil {

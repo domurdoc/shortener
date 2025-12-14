@@ -88,7 +88,7 @@ func TestShortener_ShortenJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app, handler := getAppHandler()
-			defer app.Close(nil)
+			defer func() { _ = app.Close(nil) }()
 
 			r := httptest.NewRequest(http.MethodPost, "/api/shorten", strings.NewReader(tt.body))
 			r.Header.Set(httputil.HeaderContentType, tt.contentType)

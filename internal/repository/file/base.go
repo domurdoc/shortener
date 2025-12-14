@@ -118,7 +118,8 @@ func (r *FileRepo) loadMemRepo(_ context.Context) (*mem.MemRecordRepo, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
+
 	content, err := io.ReadAll(file)
 	if err != nil {
 		return nil, err
@@ -164,7 +165,7 @@ func (r *FileRepo) dumpMemRepo(memRepo *mem.MemRecordRepo) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	records := slices.Collect(maps.Values(memRepo.ShortCodeRecords))
 	ownership := make([]serializer.Ownership, 0, len(records))
