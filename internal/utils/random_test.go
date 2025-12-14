@@ -8,7 +8,7 @@ import (
 
 func BenchmarkGenerateRandomString(b *testing.B) {
 	for b.Loop() {
-		GenerateRandomString(ALPHA, 6)
+		MustGenerateRandomString(ALPHA, 6)
 	}
 }
 
@@ -26,7 +26,7 @@ func TestGenerateRandomString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := GenerateRandomString(tt.charSet, tt.length)
+			got := MustGenerateRandomString(tt.charSet, tt.length)
 			for _, char := range got {
 				assert.Contains(t, tt.charSet, string(char))
 			}

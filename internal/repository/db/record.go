@@ -72,7 +72,7 @@ func (r *DBRecordRepo) Store(ctx context.Context, record *model.BaseRecord, user
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	row := tx.QueryRowContext(
 		ctx,
@@ -128,19 +128,19 @@ func (r *DBRecordRepo) StoreBatch(ctx context.Context, records []model.BaseRecor
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	insertRecordStmt, err := tx.PrepareContext(ctx, insertRecordQuery)
 	if err != nil {
 		return err
 	}
-	defer insertRecordStmt.Close()
+	defer func() { _ = insertRecordStmt.Close() }()
 
 	insertOwnershipStmt, err := tx.PrepareContext(ctx, insertOwnershipQuery)
 	if err != nil {
 		return err
 	}
-	defer insertOwnershipStmt.Close()
+	defer func() { _ = insertOwnershipStmt.Close() }()
 
 	var batchError model.BatchOriginalURLExistsError
 	for pos, record := range records {
@@ -224,7 +224,7 @@ func (r *DBRecordRepo) FetchForUser(ctx context.Context, userID model.UserID) ([
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		record := model.BaseRecord{}

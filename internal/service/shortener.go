@@ -23,11 +23,11 @@ func (s *Service) Shorten(ctx context.Context, user *model.User, originalURL str
 	err = s.repo.Store(ctx, record, user.ID)
 	var urlErr *model.OriginalURLExistsError
 	if errors.As(err, &urlErr) {
-		shortURL, err := url.JoinPath(s.baseURL, string(urlErr.ShortCode))
-		if err != nil {
-			return "", err
+		existingShortURL, pathErr := url.JoinPath(s.baseURL, string(urlErr.ShortCode))
+		if pathErr != nil {
+			return "", pathErr
 		}
-		return shortURL, urlErr
+		return existingShortURL, urlErr
 	}
 	if err != nil {
 		return "", err
@@ -63,9 +63,9 @@ func (s *Service) ShortenBatch(ctx context.Context, user *model.User, originalUR
 	var batchURLExistsErr model.BatchOriginalURLExistsError
 	if errors.As(err, &batchURLExistsErr) {
 		for _, urlExistsErr := range batchURLExistsErr {
-			shortURL, err := url.JoinPath(s.baseURL, string(urlExistsErr.ShortCode))
-			if err != nil {
-				return nil, err
+			shortURL, pathErr := url.JoinPath(s.baseURL, string(urlExistsErr.ShortCode))
+			if pathErr != nil {
+				return nil, pathErr
 			}
 			shortURLS[urlExistsErr.BatchPos] = shortURL
 		}

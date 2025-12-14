@@ -73,7 +73,7 @@ func New() *Config {
 	cfg := &Config{}
 	cfg.Server.Address = "localhost:8080"
 	cfg.Auth.Strategy.JWTDuration = 600 * time.Second
-	cfg.Auth.Strategy.JWTSecret = utils.GenerateRandomString(utils.ALPHA, 32)
+	cfg.Auth.Strategy.JWTSecret = utils.MustGenerateRandomString(utils.ALPHA, 32)
 	cfg.Auth.Transport.CookieName = "ilovesber"
 	cfg.Auth.Transport.CookieMaxAge = 600 * time.Second
 	cfg.Audit.File.PoolSize = 1

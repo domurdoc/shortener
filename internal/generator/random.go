@@ -15,6 +15,5 @@ func NewRandomGenerator(charset string, length int) *RandomGenerator {
 }
 
 func (g *RandomGenerator) Generate() (string, error) {
-	code := utils.GenerateRandomString(g.charset, g.length)
-	return code, nil
+	return utils.GenerateRandomString(g.charset, g.length)
 }

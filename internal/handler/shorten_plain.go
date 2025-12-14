@@ -60,5 +60,5 @@ func (h *Handler) Shorten(w http.ResponseWriter, r *http.Request) {
 	}
 	httputil.SetContentType(w.Header(), httputil.ContentTypeTextPlain)
 	w.WriteHeader(status)
-	w.Write([]byte(shortURL))
+	_, _ = w.Write([]byte(shortURL))
 }

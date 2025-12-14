@@ -36,8 +36,8 @@ func NewRequestLogger(log *zap.SugaredLogger) httputil.Middleware {
 			start := time.Now()
 			uri := r.RequestURI
 			method := r.Method
-			requestData := requestData{}
-			w = loggingResponseWriter{w, &requestData}
+			data := requestData{}
+			w = loggingResponseWriter{w, &data}
 			h.ServeHTTP(w, r)
 			duration := time.Since(start)
 			log.Infow(
@@ -45,8 +45,8 @@ func NewRequestLogger(log *zap.SugaredLogger) httputil.Middleware {
 				"uri", uri,
 				"method", method,
 				"duration", duration,
-				"status", requestData.status,
-				"size", requestData.size,
+				"status", data.status,
+				"size", data.size,
 			)
 		})
 	}

@@ -76,19 +76,19 @@ func fromJSONSnapshot(js *jsonSnapshot) *Snapshot {
 type JSONSerializer struct{}
 
 func (s *JSONSerializer) Dump(snapshot *Snapshot) ([]byte, error) {
-	jsonSnapshot := toJSONSnapshot(snapshot)
-	return json.Marshal(jsonSnapshot)
+	x := toJSONSnapshot(snapshot)
+	return json.Marshal(x)
 }
 
 func (s *JSONSerializer) Load(data []byte) (*Snapshot, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
-	var jsonSnapshot jsonSnapshot
-	if err := json.Unmarshal(data, &jsonSnapshot); err != nil {
+	var x jsonSnapshot
+	if err := json.Unmarshal(data, &x); err != nil {
 		return nil, err
 	}
-	return fromJSONSnapshot(&jsonSnapshot), nil
+	return fromJSONSnapshot(&x), nil
 }
 
 func NewJSONSerializer() *JSONSerializer {
