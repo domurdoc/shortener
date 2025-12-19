@@ -15,7 +15,15 @@ import (
 	"github.com/domurdoc/shortener/internal/router"
 )
 
+var (
+	buildVersion = "N/A"
+	buildDate    = "N/A"
+	buildCommit  = "N/A"
+)
+
 func main() {
+	printBuildParams()
+
 	cfg := config.New()
 	if err := config.ParseEnv(cfg); err != nil {
 		log.Fatal(err)
@@ -52,4 +60,10 @@ func main() {
 		compressor.GZIPMiddleware,
 	)
 	a.Log.Fatalw("http.ListenAndServe()", "err", http.ListenAndServe(a.Config.Server.Address, router))
+}
+
+func printBuildParams() {
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %s\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
 }
