@@ -2,38 +2,38 @@ package profiler
 
 import (
 	"context"
+	"errors"
+	"net"
 	"net/http"
-	"sync"
+	"time"
 
 	"go.uber.org/zap"
 )
 
 type Profiler struct {
-	server *http.Server
-	wg     *sync.WaitGroup
-	log    *zap.SugaredLogger
+	server       *http.Server
+	log          *zap.SugaredLogger
+	closeTimeout time.Duration
+	ctx          context.Context
 }
 
-func New(address string, log *zap.SugaredLogger) *Profiler {
+func New(ctx context.Context, address string, log *zap.SugaredLogger, closeTimeout time.Duration) *Profiler {
 	return &Profiler{
-		wg:     &sync.WaitGroup{},
-		server: &http.Server{Addr: address},
-		log:    log,
+		server:       &http.Server{Addr: address, BaseContext: func(l net.Listener) context.Context { return ctx }},
+		log:          log,
+		closeTimeout: closeTimeout,
+		ctx:          ctx,
 	}
 }
 
 func (p *Profiler) Start() {
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
-		if err := p.server.ListenAndServe(); err != nil {
-			p.log.Fatalw("Profiler.ListenAndServe()", "err", err)
-		}
-	}()
+	if err := p.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		p.log.Fatalw("Profiler.ListenAndServe()", "err", err)
+	}
 }
 
 func (p *Profiler) Close() error {
-	err := p.server.Shutdown(context.Background())
-	p.wg.Wait()
-	return err
+	ctx, close := context.WithTimeout(p.ctx, p.closeTimeout)
+	defer close()
+	return p.server.Shutdown(ctx)
 }

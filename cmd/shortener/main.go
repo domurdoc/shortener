@@ -1,18 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"net/http"
+	"os/signal"
+	"syscall"
 
 	"github.com/domurdoc/shortener/internal/app"
-	"github.com/domurdoc/shortener/internal/auth"
-	"github.com/domurdoc/shortener/internal/compressor"
 	"github.com/domurdoc/shortener/internal/config"
-	"github.com/domurdoc/shortener/internal/handler"
-	"github.com/domurdoc/shortener/internal/httputil"
-	"github.com/domurdoc/shortener/internal/logger"
+	"github.com/domurdoc/shortener/internal/profiler"
 	"github.com/domurdoc/shortener/internal/router"
+	"github.com/domurdoc/shortener/internal/utils"
 )
 
 var (
@@ -23,6 +22,12 @@ var (
 
 func main() {
 	printBuildParams()
+	ctx, stop := signal.NotifyContext(context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	defer stop()
 
 	cfg := config.New()
 	if err := config.ParseEnv(cfg); err != nil {
@@ -34,32 +39,26 @@ func main() {
 		log.Fatal(err)
 	}
 
-	defer func() {
-		err = a.Close(nil)
-		if err != nil {
-			log.Printf("failed to close app: %v", err)
-		}
-	}()
+	serverCloser := utils.NewCloser()
 
-	a.Log.Infow(
-		"starting server",
-		"addr", a.Config.Server.Address,
-		"baseURL", a.Config.Service.BaseURL,
-		"logLevel", a.Config.Logger.Level,
-		"Repos.Record", fmt.Sprintf("%T", a.Repos.Record),
-		"Repos.User", fmt.Sprintf("%T", a.Repos.User),
-		"audit", a.Audit,
-		"profiler", a.Config.Profiler.Address,
-	)
-	handler := handler.New(a)
-	router := router.New(handler)
-	router = httputil.AddMiddlewares(
-		router,
-		logger.NewRequestLogger(a.Log),
-		auth.NewAuthMiddleware(a.Auth),
-		compressor.GZIPMiddleware,
-	)
-	a.Log.Fatalw("http.ListenAndServe()", "err", http.ListenAndServe(a.Config.Server.Address, router))
+	s := router.NewServer(ctx, cfg.Server.Address, a, a.Log, cfg.Server.CloseTimeout)
+	go s.Start()
+	serverCloser.Register(s.Close)
+
+	if cfg.Profiler.Address != "" {
+		p := profiler.New(ctx, cfg.Profiler.Address, a.Log, cfg.Profiler.CloseTimeout)
+		go p.Start()
+		serverCloser.Register(p.Close)
+	}
+
+	<-ctx.Done()
+	stop()
+
+	serverClosingErr := serverCloser.Close()
+	if err := a.Close(serverClosingErr); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("app stopped gracefully")
 }
 
 func printBuildParams() {
