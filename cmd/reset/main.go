@@ -89,16 +89,16 @@ type SourceFile struct {
 func main() {
 	filePaths, walkErr := getFilePaths()
 	if walkErr != nil {
-		panic(walkErr)
+		log.Fatal(walkErr)
 	}
 	pkgEntries, pkgErr := parsePackages(filePaths)
 	if pkgErr != nil {
-		panic(pkgErr)
+		log.Fatal(pkgErr)
 	}
 	fmt.Println(pkgEntries)
 	srcFiles, genErr := generateSources(pkgEntries)
 	if genErr != nil {
-		panic(genErr)
+		log.Fatal(genErr)
 	}
 	writeSources(srcFiles)
 }
@@ -110,7 +110,7 @@ func getFilePaths() ([]string, error) {
 	}
 	var files []string
 
-	filepath.WalkDir(wd, func(path string, d fs.DirEntry, err error) error {
+	_ = filepath.WalkDir(wd, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}

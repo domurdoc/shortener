@@ -14,7 +14,8 @@ import (
 // The struct uses nested groups to organize settings by concern (server, auth, audit, etc.).
 type Config struct {
 	Server struct {
-		Address string `env:"SERVER_ADDRESS"`
+		Address      string        `env:"SERVER_ADDRESS"`
+		CloseTimeout time.Duration `env:"SERVER_CLOSE_TIMEOUT"`
 	}
 	Auth struct {
 		Strategy struct {
@@ -65,13 +66,15 @@ type Config struct {
 		}
 	}
 	Profiler struct {
-		Address string `env:"PROFILER_ADDRESS"`
+		Address      string        `env:"PROFILER_ADDRESS"`
+		CloseTimeout time.Duration `env:"PROFILER_CLOSE_TIMEOUT"`
 	}
 }
 
 func New() *Config {
 	cfg := &Config{}
 	cfg.Server.Address = "localhost:8080"
+	cfg.Server.CloseTimeout = 10 * time.Second
 	cfg.Auth.Strategy.JWTDuration = 600 * time.Second
 	cfg.Auth.Strategy.JWTSecret = utils.MustGenerateRandomString(utils.ALPHA, 32)
 	cfg.Auth.Transport.CookieName = "ilovesber"
@@ -87,6 +90,7 @@ func New() *Config {
 	cfg.Service.DeleterCheckInterval = 1 * time.Second
 	cfg.Generator.Random.Length = 6
 	cfg.Generator.Random.CharSet = utils.ALPHA
+	cfg.Profiler.CloseTimeout = 10 * time.Second
 	return cfg
 }
 

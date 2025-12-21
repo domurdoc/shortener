@@ -6,6 +6,8 @@ import (
 	_ "net/http/pprof"
 	"time"
 
+	"io/fs"
+
 	"go.uber.org/zap"
 
 	"github.com/domurdoc/shortener/internal/auth"
@@ -14,22 +16,20 @@ import (
 	"github.com/domurdoc/shortener/internal/config"
 	"github.com/domurdoc/shortener/internal/generator"
 	"github.com/domurdoc/shortener/internal/logger"
-	"github.com/domurdoc/shortener/internal/profiler"
 	"github.com/domurdoc/shortener/internal/service"
 	"github.com/domurdoc/shortener/internal/utils"
 )
 
 // App represents the main application structure that holds all components and configuration.
-// It manages the lifecycle of repositories, services, authentication, audit logging, and profiling.
+// It manages the lifecycle of repositories, services, authentication and audit logging.
 type App struct {
-	Config   *config.Config     // Options contains the application configuration.
-	Log      *zap.SugaredLogger // Log is the logger instance used across the application.
-	Service  *service.Service   // Service is the core business logic service for URL operations.
-	Repos    *Repositories      // Repositories manages database connections and repositories.
-	Auth     *auth.Auth         // Auth manages authentication using JWT and cookies.
-	Audit    *Audit             // Audit is the application-specific audit event handler.
-	Profiler *profiler.Profiler // Profiler is the profiling server for monitoring performance.
-	closer   utils.Closer
+	Config  *config.Config     // Options contains the application configuration.
+	Log     *zap.SugaredLogger // Log is the logger instance used across the application.
+	Service *service.Service   // Service is the core business logic service for URL operations.
+	Repos   *Repositories      // Repositories manages database connections and repositories.
+	Auth    *auth.Auth         // Auth manages authentication using JWT and cookies.
+	Audit   *Audit             // Audit is the application-specific audit event handler.
+	closer  utils.Closer
 }
 
 func New(cfg *config.Config) (*App, error) {
@@ -49,9 +49,6 @@ func New(cfg *config.Config) (*App, error) {
 	if err := a.initAudit(); err != nil {
 		return nil, a.Close(err)
 	}
-	if err := a.initProfiler(); err != nil {
-		return nil, a.Close(err)
-	}
 	return a, nil
 }
 
@@ -65,7 +62,18 @@ func (a *App) initLog() error {
 		return err
 	}
 	a.Log = log
-	a.closer.Register(a.Log.Sync)
+	a.closer.Register(
+		// Sync() returns error when sink is console, so ignore it
+		// https://github.com/uber-go/zap/issues/880
+		func() error {
+			err := a.Log.Sync()
+			var pErr *fs.PathError
+			if errors.As(err, &pErr) {
+				return nil
+			}
+			return err
+		},
+	)
 	return nil
 }
 
@@ -125,15 +133,5 @@ func (a *App) initAuth() error {
 func (a *App) initAudit() error {
 	a.Audit = NewAuditApp(a.Config, a.Log)
 	a.closer.Register(a.Audit.Close)
-	return nil
-}
-
-func (a *App) initProfiler() error {
-	if a.Config.Profiler.Address == "" {
-		return nil
-	}
-	a.Profiler = profiler.New(a.Config.Profiler.Address, a.Log)
-	a.Profiler.Start()
-	a.closer.Register(a.Profiler.Close)
 	return nil
 }
