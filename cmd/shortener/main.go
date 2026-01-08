@@ -41,12 +41,21 @@ func main() {
 
 	serverCloser := utils.NewCloser()
 
-	s := router.NewServer(ctx, cfg.Server.Address, a, a.Log, cfg.Server.CloseTimeout)
+	s := router.NewServer(
+		ctx,
+		cfg.Server.Address,
+		cfg.Server.EnableHTTPS,
+		cfg.Server.CertFile,
+		cfg.Server.KeyFile,
+		cfg.Server.CloseTimeout,
+		a,
+		a.Log,
+	)
 	go s.Start()
 	serverCloser.Register(s.Close)
 
 	if cfg.Profiler.Address != "" {
-		p := profiler.New(ctx, cfg.Profiler.Address, a.Log, cfg.Profiler.CloseTimeout)
+		p := profiler.NewServer(ctx, cfg.Profiler.Address, a.Log, cfg.Profiler.CloseTimeout)
 		go p.Start()
 		serverCloser.Register(p.Close)
 	}

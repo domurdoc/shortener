@@ -10,15 +10,15 @@ import (
 	"go.uber.org/zap"
 )
 
-type Profiler struct {
+type ProfilerServer struct {
 	server       *http.Server
 	log          *zap.SugaredLogger
 	closeTimeout time.Duration
 	ctx          context.Context
 }
 
-func New(ctx context.Context, address string, log *zap.SugaredLogger, closeTimeout time.Duration) *Profiler {
-	return &Profiler{
+func NewServer(ctx context.Context, address string, log *zap.SugaredLogger, closeTimeout time.Duration) *ProfilerServer {
+	return &ProfilerServer{
 		server:       &http.Server{Addr: address, BaseContext: func(l net.Listener) context.Context { return ctx }},
 		log:          log,
 		closeTimeout: closeTimeout,
@@ -26,13 +26,13 @@ func New(ctx context.Context, address string, log *zap.SugaredLogger, closeTimeo
 	}
 }
 
-func (p *Profiler) Start() {
+func (p *ProfilerServer) Start() {
 	if err := p.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		p.log.Fatalw("Profiler.ListenAndServe()", "err", err)
+		p.log.Fatalw("ProfilerServer.ListenAndServe()", "err", err)
 	}
 }
 
-func (p *Profiler) Close() error {
+func (p *ProfilerServer) Close() error {
 	ctx, close := context.WithTimeout(p.ctx, p.closeTimeout)
 	defer close()
 	return p.server.Shutdown(ctx)

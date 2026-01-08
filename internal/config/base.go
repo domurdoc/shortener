@@ -16,6 +16,9 @@ type Config struct {
 	Server struct {
 		Address      string        `env:"SERVER_ADDRESS"`
 		CloseTimeout time.Duration `env:"SERVER_CLOSE_TIMEOUT"`
+		EnableHTTPS  bool          `env:"ENABLE_HTTPS"`
+		CertFile     string
+		KeyFile      string
 	}
 	Auth struct {
 		Strategy struct {
@@ -75,6 +78,7 @@ func New() *Config {
 	cfg := &Config{}
 	cfg.Server.Address = "localhost:8080"
 	cfg.Server.CloseTimeout = 10 * time.Second
+	cfg.Server.EnableHTTPS = false
 	cfg.Auth.Strategy.JWTDuration = 600 * time.Second
 	cfg.Auth.Strategy.JWTSecret = utils.MustGenerateRandomString(utils.ALPHA, 32)
 	cfg.Auth.Transport.CookieName = "ilovesber"
@@ -100,12 +104,15 @@ func ParseEnv(cfg *Config) error {
 
 func ParseArgs(cfg *Config) {
 	flag.StringVar(&cfg.Server.Address, "a", cfg.Server.Address, "bind address")
+	flag.BoolVar(&cfg.Server.EnableHTTPS, "s", cfg.Server.EnableHTTPS, "enable https")
+	flag.StringVar(&cfg.Server.CertFile, "tls-cert", cfg.Server.CertFile, "cert file")
+	flag.StringVar(&cfg.Server.KeyFile, "tls-key", cfg.Server.CertFile, "key file")
 	flag.StringVar(&cfg.Service.BaseURL, "b", cfg.Service.BaseURL, "base address")
 	flag.StringVar(&cfg.Logger.Level, "l", cfg.Logger.Level, "logging level")
 	flag.StringVar(&cfg.Repositories.File.Path, "f", cfg.Repositories.File.Path, "file storage path")
 	flag.StringVar(&cfg.Repositories.DB.DSN, "d", cfg.Repositories.DB.DSN, "database DSN")
 	flag.IntVar(&cfg.Service.DeleterMaxWorkers, "w", cfg.Service.DeleterMaxWorkers, "deleter max workers")
-	flag.IntVar(&cfg.Service.DeleterMaxBatchSize, "s", cfg.Service.DeleterMaxBatchSize, "deleter max batch size")
+	flag.IntVar(&cfg.Service.DeleterMaxBatchSize, "ds", cfg.Service.DeleterMaxBatchSize, "deleter max batch size")
 	flag.DurationVar(&cfg.Service.DeleterCheckInterval, "c", cfg.Service.DeleterCheckInterval, "deleter check interval")
 	flag.StringVar(&cfg.Audit.File.Path, "audit-file", cfg.Audit.File.Path, "audit file")
 	flag.StringVar(&cfg.Audit.Remote.URL, "audit-url", cfg.Audit.Remote.URL, "audit url")
