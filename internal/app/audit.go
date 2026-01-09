@@ -20,22 +20,22 @@ func NewAuditApp(cfg *config.Config, log *zap.SugaredLogger) *Audit {
 	a := &Audit{
 		Audit: audit.New(),
 	}
-	if cfg.Audit.File.Path != "" {
+	if cfg.AuditFilePath != "" {
 		a.FileSub = subscribers.NewFile(
-			cfg.Audit.File.Path,
-			cfg.Audit.File.PoolSize,
-			cfg.Audit.File.MaxBatchSize,
-			cfg.Audit.File.BatchInterval,
+			cfg.AuditFilePath,
+			cfg.AuditFilePoolSize,
+			cfg.AuditFileMaxBatchSize,
+			cfg.AuditFileBatchInterval,
 			log,
 		)
 		a.closer.Register(a.FileSub.Close)
 		a.Audit.Register(a.FileSub)
 	}
-	if cfg.Audit.Remote.URL != "" {
+	if cfg.AuditRemoteURL != "" {
 		a.RemoteSub = subscribers.NewRemote(
-			cfg.Audit.Remote.URL,
+			cfg.AuditRemoteURL,
 			log,
-			cfg.Audit.Remote.PoolSize,
+			cfg.AuditRemotePoolSize,
 		)
 		a.closer.Register(a.RemoteSub.Close)
 		a.Audit.Register(a.RemoteSub)

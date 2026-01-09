@@ -57,7 +57,7 @@ func (a *App) Close(reason error) error {
 }
 
 func (a *App) initLog() error {
-	log, err := logger.New(a.Config.Logger.Level)
+	log, err := logger.New(a.Config.LoggerLevel)
 	if err != nil {
 		return err
 	}
@@ -89,23 +89,23 @@ func (a *App) initRepo() error {
 func (a *App) initService() error {
 	var gen generator.Generator
 
-	if a.Config.Generator.Constant.Value != "" {
+	if a.Config.ServiceGeneratorConstantValue != "" {
 		gen = generator.NewConstantGenerator(
-			a.Config.Generator.Constant.Value,
+			a.Config.ServiceGeneratorConstantValue,
 		)
-	} else if a.Config.Generator.Random.CharSet != "" && a.Config.Generator.Random.Length > 0 {
+	} else if a.Config.ServiceGeneratorRandomCharSet != "" && a.Config.ServiceGeneratorRandomLength > 0 {
 		gen = generator.NewRandomGenerator(
-			a.Config.Generator.Random.CharSet,
-			a.Config.Generator.Random.Length,
+			a.Config.ServiceGeneratorRandomCharSet,
+			a.Config.ServiceGeneratorRandomLength,
 		)
 	} else {
 		return fmt.Errorf("failed to initialize Generator")
 	}
 	a.Service = service.New(
-		a.Config.Service.BaseURL,
-		a.Config.Service.DeleterMaxWorkers,
-		a.Config.Service.DeleterMaxBatchSize,
-		time.Duration(a.Config.Service.DeleterCheckInterval),
+		a.Config.ServiceBaseURL,
+		a.Config.ServiceDeleterMaxWorkers,
+		a.Config.ServiceDeleterMaxBatchSize,
+		time.Duration(a.Config.ServiceDeleterCheckInterval),
 		a.Repos.Record,
 		a.Log,
 		a.Repos.DB,
@@ -118,12 +118,12 @@ func (a *App) initService() error {
 func (a *App) initAuth() error {
 
 	strategy := strategy.NewJWT(
-		a.Config.Auth.Strategy.JWTSecret,
-		time.Duration(a.Config.Auth.Strategy.JWTDuration),
+		a.Config.AuthJWTSecret,
+		time.Duration(a.Config.AuthJWTDuration),
 	)
 	transport := transport.NewCookie(
-		a.Config.Auth.Transport.CookieName,
-		int(a.Config.Auth.Transport.CookieMaxAge.Seconds()),
+		a.Config.AuthCookieName,
+		int(a.Config.AuthCookieMaxAge.Seconds()),
 		false,
 	)
 	a.Auth = auth.New(strategy, transport, a.Repos.User)

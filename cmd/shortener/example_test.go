@@ -17,8 +17,8 @@ import (
 )
 
 func getAppRouter(shortCode string) (*app.App, http.Handler) {
-	cfg := config.New()
-	cfg.Generator.Constant.Value = shortCode
+	cfg := config.Default()
+	cfg.ServiceGeneratorConstantValue = shortCode
 	a, err := app.New(cfg)
 	if err != nil {
 		panic(err)

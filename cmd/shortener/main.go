@@ -29,11 +29,11 @@ func main() {
 	)
 	defer stop()
 
-	cfg := config.New()
-	if err := config.ParseEnv(cfg); err != nil {
-		log.Fatal(err)
+	cfg, cfgErr := config.LoadConfig()
+	if cfgErr != nil {
+		log.Fatal(cfgErr)
 	}
-	config.ParseArgs(cfg)
+
 	a, err := app.New(cfg)
 	if err != nil {
 		log.Fatal(err)
@@ -43,19 +43,19 @@ func main() {
 
 	s := router.NewServer(
 		ctx,
-		cfg.Server.Address,
-		cfg.Server.EnableHTTPS,
-		cfg.Server.CertFile,
-		cfg.Server.KeyFile,
-		cfg.Server.CloseTimeout,
+		cfg.ServerAddress,
+		cfg.ServerEnableHTTPS,
+		cfg.ServerCertFile,
+		cfg.ServerKeyFile,
+		cfg.ServerCloseTimeout,
 		a,
 		a.Log,
 	)
 	go s.Start()
 	serverCloser.Register(s.Close)
 
-	if cfg.Profiler.Address != "" {
-		p := profiler.NewServer(ctx, cfg.Profiler.Address, a.Log, cfg.Profiler.CloseTimeout)
+	if cfg.ProfilerAddress != "" {
+		p := profiler.NewServer(ctx, cfg.ProfilerAddress, a.Log, cfg.ProfilerCloseTimeout)
 		go p.Start()
 		serverCloser.Register(p.Close)
 	}

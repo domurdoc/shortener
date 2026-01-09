@@ -1,121 +1,199 @@
 package config
 
 import (
+	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
+	"os"
 	"time"
 
 	"github.com/caarlos0/env/v11"
 
+	"github.com/jinzhu/copier"
+
 	"github.com/domurdoc/shortener/internal/utils"
 )
+
+type BaseConfig struct {
+	ConfigFile  string `env:"CONFIG" json:"-"`
+	LoggerLevel string `env:"LOG_LEVEL" json:"log_level"`
+}
+
+type ServerConfig struct {
+	ServerAddress      string        `env:"SERVER_ADDRESS" json:"server_address"`
+	ServerCloseTimeout time.Duration `env:"SERVER_CLOSE_TIMEOUT" json:"server_close_timeout"`
+	ServerEnableHTTPS  bool          `env:"ENABLE_HTTPS" json:"enable_https"`
+	ServerCertFile     string        `env:"CERT_FILE" json:"cert_file"`
+	ServerKeyFile      string        `env:"KEY_FILE" json:"key_file"`
+}
+
+type AuthConfig struct {
+	AuthJWTSecret    string        `env:"JWT_SECRET" json:"jwt_secret"`
+	AuthJWTDuration  time.Duration `env:"JWT_DURATION" json:"jwt_duration"`
+	AuthCookieName   string        `env:"COOKIE_NAME" json:"cookie_name"`
+	AuthCookieMaxAge time.Duration `env:"COOKIE_MAX_AGE" json:"cookie_max_age"`
+}
+
+type AuditConfig struct {
+	AuditFilePath          string        `env:"AUDIT_FILE" json:"audit_file"`
+	AuditFilePoolSize      int           `env:"AUDIT_FILE_POOL_SIZE" json:"audit_file_pool_size"`
+	AuditFileMaxBatchSize  int           `env:"AUDIT_FILE_MAX_BATCH_SIZE" json:"audit_file_max_batch_size"`
+	AuditFileBatchInterval time.Duration `env:"AUDIT_FILE_BATCH_INTERVAL" json:"audit_file_batch_interval"`
+	AuditRemoteURL         string        `env:"AUDIT_URL" json:"audit_url"`
+	AuditRemotePoolSize    int           `env:"AUDIT_REMOTE_POOL_SIZE" json:"audit_remote_pool_size"`
+}
+
+type ServiceConfig struct {
+	ServiceBaseURL                string        `env:"BASE_URL" json:"base_url"`
+	ServiceDeleterMaxWorkers      int           `env:"DELETER_MAX_WORKERS" json:"deleter_max_workers"`
+	ServiceDeleterMaxBatchSize    int           `env:"DELETER_MAX_BATCH_SIZE" json:"deleter_max_batch_size"`
+	ServiceDeleterCheckInterval   time.Duration `env:"DELETER_CHECK_INTERVAL" json:"deleter_check_interval"`
+	ServiceGeneratorRandomLength  int           `env:"RANDOM_CODE_LENGTH" json:"random_code_length"`
+	ServiceGeneratorRandomCharSet string        `env:"RANDOM_CODE_CHARSET" json:"random_code_charset"`
+	ServiceGeneratorConstantValue string        `env:"CONSTANT_CODE_VALUE" json:"constant_code_value"`
+}
+
+type RepositoriesConfig struct {
+	RepositoryDSN      string `env:"DATABASE_DSN" json:"database_dsn"`
+	RepositoryFilePath string `env:"FILE_STORAGE_PATH" json:"file_storage_path"`
+}
+
+type ProfilerConfig struct {
+	ProfilerAddress      string        `env:"PROFILER_ADDRESS" json:"profiler_address"`
+	ProfilerCloseTimeout time.Duration `env:"PROFILER_CLOSE_TIMEOUT" json:"profiler_close_timeout"`
+}
+
+type LoggerConfig struct {
+	LoggerLevel string `env:"LOG_LEVEL" json:"log_level"`
+}
 
 // Config holds the complete configuration for the shortener application.
 // It is populated from environment variables, command-line flags, and default values.
 // The struct uses nested groups to organize settings by concern (server, auth, audit, etc.).
 type Config struct {
-	Server struct {
-		Address      string        `env:"SERVER_ADDRESS"`
-		CloseTimeout time.Duration `env:"SERVER_CLOSE_TIMEOUT"`
-		EnableHTTPS  bool          `env:"ENABLE_HTTPS"`
-		CertFile     string
-		KeyFile      string
-	}
-	Auth struct {
-		Strategy struct {
-			JWTSecret   string        `env:"JWT_SECRET"`
-			JWTDuration time.Duration `env:"JWT_DURATION"`
-		}
-		Transport struct {
-			CookieName   string        `env:"COOKIE_NAME"`
-			CookieMaxAge time.Duration `env:"COOKIE_MAX_AGE"`
-		}
-	}
-	Audit struct {
-		File struct {
-			Path          string        `env:"AUDIT_FILE"`
-			PoolSize      int           `env:"AUDIT_FILE_POOL_SIZE"`
-			MaxBatchSize  int           `env:"AUDIT_FILE_MAX_BATCH_SIZE"`
-			BatchInterval time.Duration `env:"AUDIT_FILE_BATCH_INTERVAL"`
-		}
-		Remote struct {
-			URL      string `env:"AUDIT_URL"`
-			PoolSize int    `env:"AUDIT_REMOTE_POOL_SIZE"`
-		}
-	}
-	Logger struct {
-		Level string `env:"LOG_LEVEL"`
-	}
-	Service struct {
-		BaseURL              string        `env:"BASE_URL"`
-		DeleterMaxWorkers    int           `env:"DELETER_MAX_WORKERS"`
-		DeleterMaxBatchSize  int           `env:"DELETER_MAX_BATCH_SIZE"`
-		DeleterCheckInterval time.Duration `env:"DELETER_CHECK_INTERVAL"`
-	}
-	Repositories struct {
-		DB struct {
-			DSN string `env:"DATABASE_DSN"`
-		}
-		File struct {
-			Path string `env:"FILE_STORAGE_PATH"`
-		}
-	}
-	Generator struct {
-		Random struct {
-			Length  int    `env:"RANDOM_CODE_LENGTH"`
-			CharSet string `env:"RANDOM_CODE_CHARSET"`
-		}
-		Constant struct {
-			Value string `env:"CONSTANT_CODE_VALUE"`
-		}
-	}
-	Profiler struct {
-		Address      string        `env:"PROFILER_ADDRESS"`
-		CloseTimeout time.Duration `env:"PROFILER_CLOSE_TIMEOUT"`
-	}
+	BaseConfig
+	ServerConfig
+	AuthConfig
+	AuditConfig
+	ServiceConfig
+	RepositoriesConfig
+	ProfilerConfig
 }
 
-func New() *Config {
+func Default() *Config {
 	cfg := &Config{}
-	cfg.Server.Address = "localhost:8080"
-	cfg.Server.CloseTimeout = 10 * time.Second
-	cfg.Server.EnableHTTPS = false
-	cfg.Auth.Strategy.JWTDuration = 600 * time.Second
-	cfg.Auth.Strategy.JWTSecret = utils.MustGenerateRandomString(utils.ALPHA, 32)
-	cfg.Auth.Transport.CookieName = "ilovesber"
-	cfg.Auth.Transport.CookieMaxAge = 600 * time.Second
-	cfg.Audit.File.PoolSize = 1
-	cfg.Audit.File.MaxBatchSize = 10
-	cfg.Audit.File.BatchInterval = 1 * time.Second
-	cfg.Audit.Remote.PoolSize = 1
-	cfg.Logger.Level = "debug"
-	cfg.Service.BaseURL = "http://localhost:8080"
-	cfg.Service.DeleterMaxWorkers = 2
-	cfg.Service.DeleterMaxBatchSize = 10
-	cfg.Service.DeleterCheckInterval = 1 * time.Second
-	cfg.Generator.Random.Length = 6
-	cfg.Generator.Random.CharSet = utils.ALPHA
-	cfg.Profiler.CloseTimeout = 10 * time.Second
+	cfg.ServerAddress = "localhost:8080"
+	cfg.ServerCloseTimeout = 10 * time.Second
+	cfg.ServerEnableHTTPS = false
+	cfg.AuthJWTDuration = 600 * time.Second
+	cfg.AuthJWTSecret = utils.MustGenerateRandomString(utils.ALPHA, 32)
+	cfg.AuthCookieName = "ilovesber"
+	cfg.AuthCookieMaxAge = 600 * time.Second
+	cfg.AuditFilePoolSize = 1
+	cfg.AuditFileMaxBatchSize = 10
+	cfg.AuditFileBatchInterval = 1 * time.Second
+	cfg.AuditRemotePoolSize = 1
+	cfg.LoggerLevel = "debug"
+	cfg.ServiceBaseURL = "http://localhost:8080"
+	cfg.ServiceDeleterMaxWorkers = 2
+	cfg.ServiceDeleterMaxBatchSize = 10
+	cfg.ServiceDeleterCheckInterval = 1 * time.Second
+	cfg.ServiceGeneratorRandomLength = 6
+	cfg.ServiceGeneratorRandomCharSet = utils.ALPHA
+	cfg.ProfilerCloseTimeout = 10 * time.Second
 	return cfg
 }
 
-func ParseEnv(cfg *Config) error {
-	return env.Parse(cfg)
+func ParseEnv() (*Config, error) {
+	cfg := &Config{}
+	return cfg, env.Parse(cfg)
 }
 
-func ParseArgs(cfg *Config) {
-	flag.StringVar(&cfg.Server.Address, "a", cfg.Server.Address, "bind address")
-	flag.BoolVar(&cfg.Server.EnableHTTPS, "s", cfg.Server.EnableHTTPS, "enable https")
-	flag.StringVar(&cfg.Server.CertFile, "tls-cert", cfg.Server.CertFile, "cert file")
-	flag.StringVar(&cfg.Server.KeyFile, "tls-key", cfg.Server.CertFile, "key file")
-	flag.StringVar(&cfg.Service.BaseURL, "b", cfg.Service.BaseURL, "base address")
-	flag.StringVar(&cfg.Logger.Level, "l", cfg.Logger.Level, "logging level")
-	flag.StringVar(&cfg.Repositories.File.Path, "f", cfg.Repositories.File.Path, "file storage path")
-	flag.StringVar(&cfg.Repositories.DB.DSN, "d", cfg.Repositories.DB.DSN, "database DSN")
-	flag.IntVar(&cfg.Service.DeleterMaxWorkers, "w", cfg.Service.DeleterMaxWorkers, "deleter max workers")
-	flag.IntVar(&cfg.Service.DeleterMaxBatchSize, "ds", cfg.Service.DeleterMaxBatchSize, "deleter max batch size")
-	flag.DurationVar(&cfg.Service.DeleterCheckInterval, "c", cfg.Service.DeleterCheckInterval, "deleter check interval")
-	flag.StringVar(&cfg.Audit.File.Path, "audit-file", cfg.Audit.File.Path, "audit file")
-	flag.StringVar(&cfg.Audit.Remote.URL, "audit-url", cfg.Audit.Remote.URL, "audit url")
-	flag.StringVar(&cfg.Profiler.Address, "p", cfg.Profiler.Address, "pprof address")
+func ParseArgs() (*Config, error) {
+	cfg := &Config{}
+	flag.StringVar(&cfg.ConfigFile, "c", cfg.ConfigFile, "config file")
+	flag.StringVar(&cfg.ServerAddress, "a", cfg.ServerAddress, "bind address")
+	flag.BoolVar(&cfg.ServerEnableHTTPS, "s", cfg.ServerEnableHTTPS, "enable https")
+	flag.StringVar(&cfg.ServerCertFile, "tls-cert", cfg.ServerCertFile, "cert file")
+	flag.StringVar(&cfg.ServerKeyFile, "tls-key", cfg.ServerCertFile, "key file")
+	flag.StringVar(&cfg.ServiceBaseURL, "b", cfg.ServiceBaseURL, "base address")
+	flag.StringVar(&cfg.LoggerLevel, "l", cfg.LoggerLevel, "logging level")
+	flag.StringVar(&cfg.RepositoryFilePath, "f", cfg.RepositoryFilePath, "file storage path")
+	flag.StringVar(&cfg.RepositoryDSN, "d", cfg.RepositoryDSN, "database DSN")
+	flag.IntVar(&cfg.ServiceDeleterMaxWorkers, "w", cfg.ServiceDeleterMaxWorkers, "deleter max workers")
+	flag.IntVar(&cfg.ServiceDeleterMaxBatchSize, "ds", cfg.ServiceDeleterMaxBatchSize, "deleter max batch size")
+	flag.DurationVar(&cfg.ServiceDeleterCheckInterval, "i", cfg.ServiceDeleterCheckInterval, "deleter check interval")
+	flag.StringVar(&cfg.AuditFilePath, "audit-file", cfg.AuditFilePath, "audit file")
+	flag.StringVar(&cfg.AuditRemoteURL, "audit-url", cfg.AuditRemoteURL, "audit url")
+	flag.StringVar(&cfg.ProfilerAddress, "p", cfg.ProfilerAddress, "pprof address")
 	flag.Parse()
+	return cfg, nil
+}
+
+func ParseFile(path string) (*Config, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open config file: %w", err)
+	}
+	defer file.Close()
+
+	cfg := &Config{}
+	dec := json.NewDecoder(file)
+	if err := dec.Decode(cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse config file (JSON): %w", err)
+	}
+	return cfg, nil
+}
+
+func LoadConfig() (*Config, error) {
+	var err error
+	var defaultCfg, fileCfg, envCfg, argsCfg *Config
+
+	defaultCfg = Default()
+	envCfg, err = ParseEnv()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse env: %w", err)
+	}
+	argsCfg, err = ParseArgs()
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse args: %w", err)
+	}
+
+	var configFile string
+	if envCfg.ConfigFile != "" {
+		configFile = envCfg.ConfigFile
+	}
+	if argsCfg.ConfigFile != "" {
+		configFile = argsCfg.ConfigFile
+	}
+	if configFile != "" {
+		fileCfg, err = ParseFile(configFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse json file: %w", err)
+		}
+	}
+	return Merge(defaultCfg, fileCfg, envCfg, argsCfg)
+}
+
+func Merge(cfgs ...*Config) (*Config, error) {
+	var errs []error
+	cfg0 := Config{}
+
+	copy := func(dst, src any) {
+		errs = append(errs, copier.CopyWithOption(dst, src, copier.Option{IgnoreEmpty: true}))
+	}
+	for _, cfg := range cfgs {
+		if cfg == nil {
+			continue
+		}
+		copy(&cfg0.ServerConfig, cfg.ServerConfig)
+		copy(&cfg0.AuthConfig, cfg.AuthConfig)
+		copy(&cfg0.AuditConfig, cfg.AuditConfig)
+		copy(&cfg0.ServiceConfig, cfg.ServiceConfig)
+		copy(&cfg0.RepositoriesConfig, cfg.RepositoriesConfig)
+		copy(&cfg0.ProfilerConfig, cfg.ProfilerConfig)
+		copy(&cfg0.BaseConfig, cfg.BaseConfig)
+	}
+	return &cfg0, errors.Join(errs...)
 }

@@ -67,6 +67,7 @@ func (s *Server) Start() {
 	} else {
 		serve = s.server.ListenAndServe
 	}
+	s.log.Infow("Shortener server is starting...", "addr", s.server.Addr)
 	if err := serve(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		s.log.Fatalw("serve()", "err", err)
 	}

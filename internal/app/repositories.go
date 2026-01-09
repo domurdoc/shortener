@@ -25,8 +25,8 @@ type Repositories struct {
 func NewRepositories(cfg *config.Config, log *zap.SugaredLogger) (*Repositories, error) {
 	r := &Repositories{}
 
-	if cfg.Repositories.DB.DSN != "" {
-		pgDB, err := db.NewPG(cfg.Repositories.DB.DSN)
+	if cfg.RepositoryDSN != "" {
+		pgDB, err := db.NewPG(cfg.RepositoryDSN)
 		if err != nil {
 			return nil, err
 		}
@@ -37,10 +37,10 @@ func NewRepositories(cfg *config.Config, log *zap.SugaredLogger) (*Repositories,
 		}
 		r.Record = dbRepo.NewDBRecordRepo(pgDB, db.NewPGArger)
 		r.User = dbRepo.NewDBUserRepo(pgDB, db.NewPGArger)
-	} else if cfg.Repositories.File.Path != "" {
+	} else if cfg.RepositoryFilePath != "" {
 		jsonSerializer := serializer.NewJSONSerializer()
 		repo, err := fileRepo.New(
-			cfg.Repositories.File.Path,
+			cfg.RepositoryFilePath,
 			jsonSerializer,
 		)
 		if err != nil {

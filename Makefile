@@ -48,43 +48,43 @@ lint:
 
 test: re test1 test2 test3 test4 test5 test6 test7 test8 test9 test10 test11 test12 test13 test14 test15 test16 test17 test18
 
-test1: kill
+test1: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration1$$ -binary-path=${BIN}
 
-test2: kill
+test2: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration2$$ -source-path=${DIR}
 
-test3: kill
+test3: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration3$$ -source-path=${DIR}
 
-test4: kill
+test4: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration4$$ -binary-path=${BIN} -server-port=${PORT}
 
-test5: kill
+test5: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration5$$ -binary-path=${BIN} -server-port=${PORT}
 
-test6: kill
+test6: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration6$$ -source-path=${DIR}
 
-test7: kill
+test7: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration7$$ -binary-path=${BIN} -source-path=${DIR}
 
-test8: kill
+test8: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration8$$ -binary-path=${BIN}
 
-test9: kill
+test9: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration9$$ -binary-path=${BIN} -source-path=${DIR} -file-storage-path=${FILE}
 
-test10: kill
+test10: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration10$$ -binary-path=${BIN} -source-path=${DIR} -database-dsn=${DSN}
 
-test11: kill
+test11: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration11$$ -binary-path=${BIN} -database-dsn=${DSN}
 
-test12: kill
+test12: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration12$$ -binary-path=${BIN} -database-dsn=${DSN}
 
-test13: kill
+test13: kill re
 	./${TESTBIN} -test.v -test.run=^TestIteration13$$ -binary-path=${BIN} -database-dsn=${DSN}
 
 test14: kill re

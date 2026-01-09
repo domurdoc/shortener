@@ -6,7 +6,7 @@ import (
 )
 
 func getAppHandler() (*app.App, *Handler) {
-	cfg := config.New()
+	cfg := config.Default()
 	app, err := app.New(cfg)
 	if err != nil {
 		panic(err)

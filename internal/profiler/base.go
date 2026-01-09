@@ -27,6 +27,7 @@ func NewServer(ctx context.Context, address string, log *zap.SugaredLogger, clos
 }
 
 func (p *ProfilerServer) Start() {
+	p.log.Infow("Profiler server is starting...", "addr", p.server.Addr)
 	if err := p.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		p.log.Fatalw("ProfilerServer.ListenAndServe()", "err", err)
 	}
