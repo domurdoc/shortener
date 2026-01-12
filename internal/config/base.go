@@ -2,15 +2,13 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/caarlos0/env/v11"
-
-	"github.com/jinzhu/copier"
 
 	"github.com/domurdoc/shortener/internal/utils"
 )
@@ -105,18 +103,16 @@ func Default() *Config {
 	return cfg
 }
 
-func ParseEnv() (*Config, error) {
-	cfg := &Config{}
+func ParseEnv(cfg *Config) (*Config, error) {
 	return cfg, env.Parse(cfg)
 }
 
-func ParseArgs() (*Config, error) {
-	cfg := &Config{}
-	flag.StringVar(&cfg.ConfigFile, "c", cfg.ConfigFile, "config file")
+func ParseArgs(cfg *Config) (*Config, error) {
+	flag.StringVar(&cfg.ConfigFile, "c", cfg.ConfigFile, "config file") // for usage purposes only
 	flag.StringVar(&cfg.ServerAddress, "a", cfg.ServerAddress, "bind address")
 	flag.BoolVar(&cfg.ServerEnableHTTPS, "s", cfg.ServerEnableHTTPS, "enable https")
 	flag.StringVar(&cfg.ServerCertFile, "tls-cert", cfg.ServerCertFile, "cert file")
-	flag.StringVar(&cfg.ServerKeyFile, "tls-key", cfg.ServerCertFile, "key file")
+	flag.StringVar(&cfg.ServerKeyFile, "tls-key", cfg.ServerKeyFile, "key file")
 	flag.StringVar(&cfg.ServiceBaseURL, "b", cfg.ServiceBaseURL, "base address")
 	flag.StringVar(&cfg.LoggerLevel, "l", cfg.LoggerLevel, "logging level")
 	flag.StringVar(&cfg.RepositoryFilePath, "f", cfg.RepositoryFilePath, "file storage path")
@@ -131,14 +127,13 @@ func ParseArgs() (*Config, error) {
 	return cfg, nil
 }
 
-func ParseFile(path string) (*Config, error) {
+func ParseFile(cfg *Config, path string) (*Config, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open config file: %w", err)
 	}
 	defer file.Close()
 
-	cfg := &Config{}
 	dec := json.NewDecoder(file)
 	if err := dec.Decode(cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config file (JSON): %w", err)
@@ -148,52 +143,35 @@ func ParseFile(path string) (*Config, error) {
 
 func LoadConfig() (*Config, error) {
 	var err error
-	var defaultCfg, fileCfg, envCfg, argsCfg *Config
 
-	defaultCfg = Default()
-	envCfg, err = ParseEnv()
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse env: %w", err)
-	}
-	argsCfg, err = ParseArgs()
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse args: %w", err)
-	}
-
-	var configFile string
-	if envCfg.ConfigFile != "" {
-		configFile = envCfg.ConfigFile
-	}
-	if argsCfg.ConfigFile != "" {
-		configFile = argsCfg.ConfigFile
-	}
-	if configFile != "" {
-		fileCfg, err = ParseFile(configFile)
+	cfg := Default()
+	configPath := getConfigPath()
+	if configPath != "" {
+		cfg, err = ParseFile(cfg, configPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse json file: %w", err)
 		}
 	}
-	return Merge(defaultCfg, fileCfg, envCfg, argsCfg)
+	cfg, err = ParseEnv(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse env: %w", err)
+	}
+	cfg, err = ParseArgs(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse args: %w", err)
+	}
+	return cfg, nil
 }
 
-func Merge(cfgs ...*Config) (*Config, error) {
-	var errs []error
-	cfg0 := Config{}
+func getConfigPath() string {
+	var configPath string
 
-	copy := func(dst, src any) {
-		errs = append(errs, copier.CopyWithOption(dst, src, copier.Option{IgnoreEmpty: true}))
+	i := slices.Index(os.Args, "-c")
+	if i != -1 && i+1 < len(os.Args) {
+		configPath = os.Args[i+1]
 	}
-	for _, cfg := range cfgs {
-		if cfg == nil {
-			continue
-		}
-		copy(&cfg0.ServerConfig, cfg.ServerConfig)
-		copy(&cfg0.AuthConfig, cfg.AuthConfig)
-		copy(&cfg0.AuditConfig, cfg.AuditConfig)
-		copy(&cfg0.ServiceConfig, cfg.ServiceConfig)
-		copy(&cfg0.RepositoriesConfig, cfg.RepositoriesConfig)
-		copy(&cfg0.ProfilerConfig, cfg.ProfilerConfig)
-		copy(&cfg0.BaseConfig, cfg.BaseConfig)
+	if configPath == "" {
+		configPath = os.Getenv("CONFIG")
 	}
-	return &cfg0, errors.Join(errs...)
+	return configPath
 }

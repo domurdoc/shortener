@@ -22,20 +22,14 @@ type Server struct {
 	log          *zap.SugaredLogger
 	closeTimeout time.Duration
 	ctx          context.Context
-	enableTLS    bool
-	certFile     string
-	keyFile      string
 }
 
 func NewServer(
 	ctx context.Context,
-	address string,
-	enableHTTPS bool,
-	certFile string,
-	keyFile string,
-	closeTimeout time.Duration,
 	a *app.App,
 	log *zap.SugaredLogger,
+	address string,
+	closeTimeout time.Duration,
 ) *Server {
 	h := handler.New(a)
 	r := httputil.AddMiddlewares(
@@ -53,23 +47,21 @@ func NewServer(
 		log:          log,
 		closeTimeout: closeTimeout,
 		ctx:          ctx,
-		enableTLS:    enableHTTPS,
-		certFile:     certFile,
-		keyFile:      keyFile,
 	}
 	return s
 }
 
 func (s *Server) Start() {
-	var serve func() error
-	if s.enableTLS {
-		serve = func() error { return s.server.ListenAndServeTLS(s.certFile, s.keyFile) }
-	} else {
-		serve = s.server.ListenAndServe
-	}
 	s.log.Infow("Shortener server is starting...", "addr", s.server.Addr)
-	if err := serve(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		s.log.Fatalw("serve()", "err", err)
+	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		s.log.Fatalw("ListenAndServe()", "err", err)
+	}
+}
+
+func (s *Server) StartTLS(certFile string, keyFile string) {
+	s.log.Infow("Shortener server is starting (TLS)...", "addr", s.server.Addr)
+	if err := s.server.ListenAndServeTLS(certFile, keyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		s.log.Fatalw("ListenAndServeTLS()", "err", err)
 	}
 }
 

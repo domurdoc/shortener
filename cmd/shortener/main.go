@@ -43,15 +43,16 @@ func main() {
 
 	s := router.NewServer(
 		ctx,
-		cfg.ServerAddress,
-		cfg.ServerEnableHTTPS,
-		cfg.ServerCertFile,
-		cfg.ServerKeyFile,
-		cfg.ServerCloseTimeout,
 		a,
 		a.Log,
+		cfg.ServerAddress,
+		cfg.ServerCloseTimeout,
 	)
-	go s.Start()
+	if cfg.ServerEnableHTTPS {
+		go s.StartTLS(cfg.ServerCertFile, cfg.ServerKeyFile)
+	} else {
+		go s.Start()
+	}
 	serverCloser.Register(s.Close)
 
 	if cfg.ProfilerAddress != "" {
