@@ -72,6 +72,9 @@ type RecordRepo interface {
 	//   - The number of records successfully marked as deleted.
 	//   - An error if the operation fails partially or completely.
 	Delete(context.Context, []model.UserRecord) (int, error)
+
+	// CountURLs returns the total number of records in the repository.
+	CountURLs(context.Context) (int, error)
 }
 
 // UserRepo defines the interface for user management operations.
@@ -98,4 +101,7 @@ type UserRepo interface {
 	//   - A pointer to the newly created User.
 	//   - An error if user creation fails.
 	CreateUser(context.Context) (*model.User, error)
+
+	// CountUsers returns the total number of users in the repository.
+	CountUsers(context.Context) (int, error)
 }

@@ -58,6 +58,9 @@ WHERE
 			(o.user_id, r.key) IN (%s)
 	)
 `
+	queryCountRecords = `
+SELECT COUNT(*) FROM records
+`
 )
 
 func (r *DBRecordRepo) Store(ctx context.Context, record *model.BaseRecord, userID model.UserID) error {
@@ -260,4 +263,14 @@ func (r *DBRecordRepo) Delete(ctx context.Context, records []model.UserRecord) (
 	}
 	count, err := res.RowsAffected()
 	return int(count), err
+}
+
+func (r *DBRecordRepo) CountURLs(ctx context.Context) (int, error) {
+	var count int
+
+	row := r.db.QueryRowContext(ctx, queryCountRecords)
+	if err := row.Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
 }

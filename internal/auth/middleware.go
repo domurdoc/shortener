@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/domurdoc/shortener/internal/httputil"
 	"github.com/domurdoc/shortener/internal/model"
 )
 
@@ -13,22 +12,20 @@ type ctxKey string
 
 const userKey = ctxKey("user")
 
-func NewAuthMiddleware(auth *Auth) httputil.Middleware {
-	return func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx := r.Context()
-			user, err := auth.AuthenticateOrRegisterAndLogin(ctx, w, r)
-			if err != nil {
-				var invalidTokenErr *InvalidTokenError
-				if errors.As(err, &invalidTokenErr) {
-					http.Error(w, err.Error(), http.StatusUnauthorized)
-					return
-				}
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+func AuthRequest(fn http.HandlerFunc, auth *Auth) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		user, err := auth.AuthenticateOrRegisterAndLogin(ctx, w, r)
+		if err != nil {
+			var invalidTokenErr *InvalidTokenError
+			if errors.As(err, &invalidTokenErr) {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
-			h.ServeHTTP(w, AttachUser(r, user))
-		})
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		fn(w, AttachUser(r, user))
 	}
 }
 

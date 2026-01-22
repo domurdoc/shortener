@@ -28,6 +28,9 @@ INSERT INTO users DEFAULT VALUES RETURNING id
 	queryGetUser = `
 SELECT id FROM users WHERE id = %s
 `
+	queryCountUsers = `
+SELECT COUNT(*) FROM users
+`
 )
 
 func (r *DBUserRepo) CreateUser(ctx context.Context) (*model.User, error) {
@@ -55,4 +58,14 @@ func (r *DBUserRepo) GetUser(ctx context.Context, userID model.UserID) (*model.U
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *DBUserRepo) CountUsers(ctx context.Context) (int, error) {
+	var count int
+
+	row := r.db.QueryRowContext(ctx, queryCountUsers)
+	if err := row.Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
 }

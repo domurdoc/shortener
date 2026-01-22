@@ -14,8 +14,9 @@ import (
 )
 
 type BaseConfig struct {
-	ConfigFile  string `env:"CONFIG" json:"-"`
-	LoggerLevel string `env:"LOG_LEVEL" json:"log_level"`
+	ConfigFile    string `env:"CONFIG" json:"-"`
+	LoggerLevel   string `env:"LOG_LEVEL" json:"log_level"`
+	TrustedSubnet string `env:"TRUSTED_SUBNET" json:"trusted_subnet"`
 }
 
 type ServerConfig struct {
@@ -100,6 +101,7 @@ func Default() *Config {
 	cfg.ServiceGeneratorRandomLength = 6
 	cfg.ServiceGeneratorRandomCharSet = utils.ALPHA
 	cfg.ProfilerCloseTimeout = 10 * time.Second
+	cfg.TrustedSubnet = ""
 	return cfg
 }
 
@@ -123,6 +125,7 @@ func ParseArgs(cfg *Config) (*Config, error) {
 	flag.StringVar(&cfg.AuditFilePath, "audit-file", cfg.AuditFilePath, "audit file")
 	flag.StringVar(&cfg.AuditRemoteURL, "audit-url", cfg.AuditRemoteURL, "audit url")
 	flag.StringVar(&cfg.ProfilerAddress, "p", cfg.ProfilerAddress, "pprof address")
+	flag.StringVar(&cfg.TrustedSubnet, "t", cfg.TrustedSubnet, "trusted subnet")
 	flag.Parse()
 	return cfg, nil
 }

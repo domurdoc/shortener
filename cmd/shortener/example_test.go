@@ -9,10 +9,8 @@ import (
 	"resty.dev/v3"
 
 	"github.com/domurdoc/shortener/internal/app"
-	"github.com/domurdoc/shortener/internal/auth"
 	"github.com/domurdoc/shortener/internal/config"
 	"github.com/domurdoc/shortener/internal/handler"
-	"github.com/domurdoc/shortener/internal/httputil"
 	"github.com/domurdoc/shortener/internal/router"
 )
 
@@ -24,11 +22,7 @@ func getAppRouter(shortCode string) (*app.App, http.Handler) {
 		panic(err)
 	}
 	h := handler.New(a)
-	r := router.New(h)
-	r = httputil.AddMiddlewares(
-		r,
-		auth.NewAuthMiddleware(a.Auth),
-	)
+	r := router.NewRouter(h, a.Auth, a.Log, a.Config.TrustedSubnet)
 	return a, r
 }
 

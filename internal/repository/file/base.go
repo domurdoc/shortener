@@ -111,6 +111,16 @@ func (r *FileRepo) Delete(ctx context.Context, records []model.UserRecord) (int,
 	return count, err
 }
 
+func (r *FileRepo) CountURLs(ctx context.Context) (int, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	memRepo, err := r.loadMemRepo(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return memRepo.CountURLs(ctx)
+}
+
 func (r *FileRepo) loadMemRepo(_ context.Context) (*mem.MemRecordRepo, error) {
 	memRepo := mem.NewMemRecordRepo()
 

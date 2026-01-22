@@ -9,6 +9,7 @@ import (
 
 	"github.com/domurdoc/shortener/internal/app"
 	"github.com/domurdoc/shortener/internal/config"
+	"github.com/domurdoc/shortener/internal/handler"
 	"github.com/domurdoc/shortener/internal/profiler"
 	"github.com/domurdoc/shortener/internal/router"
 	"github.com/domurdoc/shortener/internal/utils"
@@ -41,9 +42,16 @@ func main() {
 
 	serverCloser := utils.NewCloser()
 
+	h := handler.New(a)
+	r := router.NewRouter(
+		h,
+		a.Auth,
+		a.Log,
+		cfg.TrustedSubnet,
+	)
 	s := router.NewServer(
 		ctx,
-		a,
+		r,
 		a.Log,
 		cfg.ServerAddress,
 		cfg.ServerCloseTimeout,

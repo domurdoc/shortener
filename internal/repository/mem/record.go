@@ -178,3 +178,8 @@ func (r *MemRecordRepo) Delete(ctx context.Context, records []model.UserRecord) 
 	}
 	return counter, nil
 }
+
+// CountURLs returns the total number of records in the repository.
+func (r *MemRecordRepo) CountURLs(ctx context.Context) (int, error) {
+	return len(r.ShortCodeRecords), nil
+}

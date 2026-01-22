@@ -8,13 +8,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-
-	"github.com/domurdoc/shortener/internal/app"
-	"github.com/domurdoc/shortener/internal/auth"
-	"github.com/domurdoc/shortener/internal/compressor"
-	"github.com/domurdoc/shortener/internal/handler"
-	"github.com/domurdoc/shortener/internal/httputil"
-	"github.com/domurdoc/shortener/internal/logger"
 )
 
 type Server struct {
@@ -26,23 +19,16 @@ type Server struct {
 
 func NewServer(
 	ctx context.Context,
-	a *app.App,
+	h http.Handler,
 	log *zap.SugaredLogger,
 	address string,
 	closeTimeout time.Duration,
 ) *Server {
-	h := handler.New(a)
-	r := httputil.AddMiddlewares(
-		New(h),
-		logger.NewRequestLogger(a.Log),
-		auth.NewAuthMiddleware(a.Auth),
-		compressor.GZIPMiddleware,
-	)
 	s := &Server{
 		server: &http.Server{
 			Addr:        address,
 			BaseContext: func(l net.Listener) context.Context { return ctx },
-			Handler:     r,
+			Handler:     h,
 		},
 		log:          log,
 		closeTimeout: closeTimeout,
