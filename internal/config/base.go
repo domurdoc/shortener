@@ -67,6 +67,10 @@ type LoggerConfig struct {
 	LoggerLevel string `env:"LOG_LEVEL" json:"log_level"`
 }
 
+type GRPCConfig struct {
+	GRPCPort int `env:"GRPC_PORT" json:"grpc_port"`
+}
+
 // Config holds the complete configuration for the shortener application.
 // It is populated from environment variables, command-line flags, and default values.
 // The struct uses nested groups to organize settings by concern (server, auth, audit, etc.).
@@ -78,6 +82,7 @@ type Config struct {
 	ServiceConfig
 	RepositoriesConfig
 	ProfilerConfig
+	GRPCConfig
 }
 
 func Default() *Config {
@@ -102,6 +107,7 @@ func Default() *Config {
 	cfg.ServiceGeneratorRandomCharSet = utils.ALPHA
 	cfg.ProfilerCloseTimeout = 10 * time.Second
 	cfg.TrustedSubnet = ""
+	cfg.GRPCPort = 0
 	return cfg
 }
 
@@ -126,6 +132,7 @@ func ParseArgs(cfg *Config) (*Config, error) {
 	flag.StringVar(&cfg.AuditRemoteURL, "audit-url", cfg.AuditRemoteURL, "audit url")
 	flag.StringVar(&cfg.ProfilerAddress, "p", cfg.ProfilerAddress, "pprof address")
 	flag.StringVar(&cfg.TrustedSubnet, "t", cfg.TrustedSubnet, "trusted subnet")
+	flag.IntVar(&cfg.GRPCPort, "g", cfg.GRPCPort, "grpc port")
 	flag.Parse()
 	return cfg, nil
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/domurdoc/shortener/internal/app"
 	"github.com/domurdoc/shortener/internal/config"
+	"github.com/domurdoc/shortener/internal/grpc"
 	"github.com/domurdoc/shortener/internal/handler"
 	"github.com/domurdoc/shortener/internal/profiler"
 	"github.com/domurdoc/shortener/internal/router"
@@ -30,6 +31,9 @@ func main() {
 	)
 	defer stop()
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	cfg, cfgErr := config.LoadConfig()
 	if cfgErr != nil {
 		log.Fatal(cfgErr)
@@ -40,7 +44,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	serverCloser := utils.NewCloser()
+	closer := utils.NewCloser()
 
 	h := handler.New(a)
 	r := router.NewRouter(
@@ -49,31 +53,52 @@ func main() {
 		a.Log,
 		cfg.TrustedSubnet,
 	)
-	s := router.NewServer(
+	mainSrv := router.NewServer(
 		ctx,
 		r,
 		a.Log,
 		cfg.ServerAddress,
 		cfg.ServerCloseTimeout,
 	)
+
 	if cfg.ServerEnableHTTPS {
-		go s.StartTLS(cfg.ServerCertFile, cfg.ServerKeyFile)
+		go func() {
+			mainSrv.StartTLS(cfg.ServerCertFile, cfg.ServerKeyFile)
+			cancel()
+		}()
 	} else {
-		go s.Start()
+		go func() {
+			mainSrv.Start()
+			cancel()
+		}()
 	}
-	serverCloser.Register(s.Close)
+	closer.Register(mainSrv.Close)
 
 	if cfg.ProfilerAddress != "" {
-		p := profiler.NewServer(ctx, cfg.ProfilerAddress, a.Log, cfg.ProfilerCloseTimeout)
-		go p.Start()
-		serverCloser.Register(p.Close)
+		profSrv := profiler.NewServer(ctx, cfg.ProfilerAddress, a.Log, cfg.ProfilerCloseTimeout)
+		go func() {
+			profSrv.Start()
+			cancel()
+		}()
+		closer.Register(profSrv.Close)
+	}
+
+	if cfg.GRPCPort != 0 {
+		grpcSvc := grpc.NewShortenerServiceServer(a)
+		grpcSrv := grpc.NewServer(grpcSvc, a.Log, a.Auth, cfg.GRPCPort)
+		go func() {
+			grpcSrv.Start()
+			cancel()
+		}()
+		closer.Register(grpcSrv.Close)
 	}
 
 	<-ctx.Done()
+	cancel()
 	stop()
 
-	serverClosingErr := serverCloser.Close()
-	if err := a.Close(serverClosingErr); err != nil {
+	closingErr := closer.Close()
+	if err := a.Close(closingErr); err != nil {
 		log.Fatal(err)
 	}
 	log.Println("app stopped gracefully")

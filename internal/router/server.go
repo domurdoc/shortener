@@ -37,22 +37,31 @@ func NewServer(
 	return s
 }
 
-func (s *Server) Start() {
-	s.log.Infow("Shortener server is starting...", "addr", s.server.Addr)
+func (s *Server) Start() error {
+	s.log.Infow("Main server is starting...", "addr", s.server.Addr)
 	if err := s.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		s.log.Fatalw("ListenAndServe()", "err", err)
+		s.log.Warnw("Main server ListenAndServe()", "err", err)
+		return err
 	}
+	return nil
 }
 
-func (s *Server) StartTLS(certFile string, keyFile string) {
-	s.log.Infow("Shortener server is starting (TLS)...", "addr", s.server.Addr)
+func (s *Server) StartTLS(certFile string, keyFile string) error {
+	s.log.Infow("Main server is starting (TLS)...", "addr", s.server.Addr)
 	if err := s.server.ListenAndServeTLS(certFile, keyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		s.log.Fatalw("ListenAndServeTLS()", "err", err)
+		s.log.Warnw("Main server ListenAndServeTLS()", "err", err)
+		return err
 	}
+	return nil
 }
 
 func (s *Server) Close() error {
 	ctx, close := context.WithTimeout(s.ctx, s.closeTimeout)
 	defer close()
-	return s.server.Shutdown(ctx)
+	if err := s.server.Shutdown(ctx); err != nil {
+		s.log.Warnw("Main server Shutdown()", "err", err)
+		return err
+	}
+	s.log.Info("Main server is closed")
+	return nil
 }
