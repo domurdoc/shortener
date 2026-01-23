@@ -4,22 +4,29 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 
+	"github.com/domurdoc/shortener/internal/auth"
+	"github.com/domurdoc/shortener/internal/compressor"
 	"github.com/domurdoc/shortener/internal/handler"
+	"github.com/domurdoc/shortener/internal/httputil"
+	"github.com/domurdoc/shortener/internal/logger"
 )
 
-func New(handler *handler.Handler) http.Handler {
-	router := chi.NewRouter()
-	setupRoutes(router, handler)
-	return router
-}
+func NewRouter(h *handler.Handler, a *auth.Auth, log *zap.SugaredLogger, statsTrustedSubnet string) http.Handler {
+	r := chi.NewRouter()
 
-func setupRoutes(router *chi.Mux, handler *handler.Handler) {
-	router.Post("/", handler.Shorten)
-	router.Get("/ping", handler.Ping)
-	router.Get("/{shortCode}", handler.Retrieve)
-	router.Post("/api/shorten", handler.ShortenJSON)
-	router.Post("/api/shorten/batch", handler.ShortenBatchJSON)
-	router.Get("/api/user/urls", handler.RetrieveForUser)
-	router.Delete("/api/user/urls", handler.DeleteShortCodes)
+	r.Use(logger.NewRequestLogger(log))
+	r.Use(compressor.GZIPMiddleware)
+
+	r.Post("/", auth.AuthRequest(h.Shorten, a))
+	r.Get("/ping", auth.AuthRequest(h.Ping, a))
+	r.Get("/{shortCode}", auth.AuthRequest(h.Retrieve, a))
+	r.Post("/api/shorten", auth.AuthRequest(h.ShortenJSON, a))
+	r.Post("/api/shorten/batch", auth.AuthRequest(h.ShortenBatchJSON, a))
+	r.Get("/api/user/urls", auth.AuthRequest(h.RetrieveForUser, a))
+	r.Delete("/api/user/urls", auth.AuthRequest(h.DeleteShortCodes, a))
+	r.Get("/api/internal/stats", httputil.CheckSubnet(h.GetStats, statsTrustedSubnet))
+
+	return r
 }

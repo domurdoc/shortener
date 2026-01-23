@@ -26,15 +26,22 @@ func NewServer(ctx context.Context, address string, log *zap.SugaredLogger, clos
 	}
 }
 
-func (p *ProfilerServer) Start() {
+func (p *ProfilerServer) Start() error {
 	p.log.Infow("Profiler server is starting...", "addr", p.server.Addr)
 	if err := p.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		p.log.Fatalw("ProfilerServer.ListenAndServe()", "err", err)
+		p.log.Warnw("Profiler server ListenAndServe()", "err", err)
+		return err
 	}
+	return nil
 }
 
 func (p *ProfilerServer) Close() error {
 	ctx, close := context.WithTimeout(p.ctx, p.closeTimeout)
 	defer close()
-	return p.server.Shutdown(ctx)
+	if err := p.server.Shutdown(ctx); err != nil {
+		p.log.Warnw("Profiler server Shutdown()", "err", err)
+		return err
+	}
+	p.log.Info("Profiler server is stopped")
+	return nil
 }

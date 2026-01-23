@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/domurdoc/shortener/internal/auth/strategy"
@@ -28,33 +29,44 @@ func New(strategy strategy.Strategy, transport transport.Transport, repo reposit
 		repo:      repo,
 	}
 }
-
-func (a *Auth) Authenticate(ctx context.Context, r *http.Request) (*model.User, error) {
-	tokenString, err := a.transport.Read(r)
-	if err != nil {
-		return nil, &NoTokenError{err}
-	}
-	user, err := a.strategy.ReadToken(ctx, tokenString, a.repo)
+func (a *Auth) AuthenticateToken(ctx context.Context, token string) (*model.User, error) {
+	user, err := a.strategy.ReadToken(ctx, token, a.repo)
 	if err != nil {
 		return nil, &InvalidTokenError{err}
 	}
 	return user, nil
 }
 
-func (a *Auth) Login(ctx context.Context, w http.ResponseWriter, user *model.User) error {
-	tokenString, err := a.strategy.WriteToken(ctx, user)
+func (a *Auth) GenerateToken(ctx context.Context, user *model.User) (string, error) {
+	token, err := a.strategy.WriteToken(ctx, user)
 	if err != nil {
-		return err
+		return "", fmt.Errorf("failed to generate token")
 	}
-	return a.transport.Write(w, tokenString)
+	return token, nil
 }
 
 func (a *Auth) Register(ctx context.Context) (*model.User, error) {
 	return a.repo.CreateUser(ctx)
 }
 
+func (a *Auth) AuthenticateRequest(ctx context.Context, r *http.Request) (*model.User, error) {
+	tokenString, err := a.transport.Read(r)
+	if err != nil {
+		return nil, &NoTokenError{err}
+	}
+	return a.AuthenticateToken(ctx, tokenString)
+}
+
+func (a *Auth) Login(ctx context.Context, w http.ResponseWriter, user *model.User) error {
+	token, err := a.GenerateToken(ctx, user)
+	if err != nil {
+		return err
+	}
+	return a.transport.Write(w, token)
+}
+
 func (a *Auth) AuthenticateOrRegisterAndLogin(ctx context.Context, w http.ResponseWriter, r *http.Request) (*model.User, error) {
-	user, err := a.Authenticate(ctx, r)
+	user, err := a.AuthenticateRequest(ctx, r)
 	if err != nil {
 		var noTokenErr *NoTokenError
 		if errors.As(err, &noTokenErr) {

@@ -13,7 +13,7 @@ TESTBIN = shortenertest
 WIPEDBBIN = wipedb
 
 run:
-	go run ${MAIN} -d ${DSN}
+	go run ${MAIN} -d ${DSN} -t 192.168.1.1/24
 
 exe:
 	./${BIN}

@@ -65,3 +65,8 @@ func (m *MemUserRepo) CreateUser(ctx context.Context) (*model.User, error) {
 	m.storage[nextUserID] = user
 	return &user, nil
 }
+
+// CountUsers returns the total number of users in the repository.
+func (m *MemUserRepo) CountUsers(ctx context.Context) (int, error) {
+	return len(m.storage), nil
+}
